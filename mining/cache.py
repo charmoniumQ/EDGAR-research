@@ -18,7 +18,7 @@ def download(path):
 def download_no_cache(path):
     '''Download a file without attempting to read or write from the cache'''
     print('cache.py: downloading {path}'.format(**locals()))
-    url_path = 'ftp://ftp.sec.gov/' + path
+    url_path = 'https://www.sec.gov/Archives/' + path
     download = False
     while not download:
         try:
