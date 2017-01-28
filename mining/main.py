@@ -18,4 +18,3 @@ while input() == '':
         print(path)
         print(e)
     print('\n')
-# testing
