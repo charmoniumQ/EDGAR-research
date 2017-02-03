@@ -3,7 +3,7 @@ from zipfile import ZipFile
 from re import sub
 from itertools import islice
 from datetime import datetime
-import mining.cache as cache
+import cache
 
 # ftp://ftp.sec.gov/edgar/daily-index/2016/QTR3/
 # ftp://ftp.sec.gov/edgar/full-index/2016/QTR3/
@@ -32,9 +32,13 @@ def download_index(year, qtr, index):
         with ZipFile(BytesIO(compressed_file), 'a') as index_zip:
             # extract {index}.idx where {index} gets replaced with
             # 'company', 'master', or 'form'
-            with index_zip.open('{index}.idx'.format(**locals())) as uncompressed_file:
+            uncompressed_file = index_zip.open('{index}.idx'.format(**locals()))
+            if cache.ENABLE_CACHING:
                 cache.put(uncompressed_path, uncompressed_file)
-        return cache.get(uncompressed_path)
+                uncompressed_file.close()
+                return cache.get(uncompressed_path)
+            else:
+                return uncompressed_file
 
 def normalize(line):
     '''Returns an list of elements found on each line (uppercased)'''
@@ -74,7 +78,7 @@ def parse_index(index_file):
 #            print("skipping index, dont know what's wrong")
 
 
-def get_index(year, qtr, company=None):
+def get_index(year, qtr):
     '''Download the given index and cache it to disk.
 If a cached copy is available, use that instead.
 Caches are stored in data/ directory
@@ -91,16 +95,12 @@ Caches are stored in data/ directory
     index_file = download_index(year, qtr, 'form')
     for index_record in parse_index(index_file):
         if index_record['Form Type'] == '10-K':
-            if not company:
-                yield index_record
-            else:
-                if company.upper() in index_record['Company Name'].upper():
-                    yield index_record
+            yield index_record
     index_file.close()
 
 if __name__ == '__main__':
-    form_index = get_index(2016, 3, 'form')
-    print('Pres enter for another record')
+    form_index = get_index(2016, 3)
+    print('Press enter for another record')
     while input() == '':
         print(next(form_index))
 
