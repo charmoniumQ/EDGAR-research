@@ -1,3 +1,4 @@
+from __future__ import print_function
 from os import mkdir
 from os.path import join
 import re
@@ -128,7 +129,7 @@ def SGML_to_files(sgml_contents):
             files[-1][tagname] = content
     return files
 
-def get_risk_factors(path):
+def get_risk_factors(path, debug=True):
     sgml = download(path)
     files = SGML_to_files(sgml.read())
     sgml.close()
@@ -138,7 +139,7 @@ def get_risk_factors(path):
     # except:
     #     pass
 
-    risk_factors = parse_10k(files)
+    risk_factors = parse_10k(files, debug)
     if '1A' in risk_factors:
         return risk_factors['1A']
     else:

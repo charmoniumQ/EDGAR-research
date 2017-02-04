@@ -1,3 +1,4 @@
+from __future__ import print_function
 from cache import download
 from itertools import islice
 from retrieve_index import get_index

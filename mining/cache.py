@@ -1,10 +1,10 @@
+from __future__ import print_function
 from urllib.request import urlopen
 from os import mkdir
 from os.path import join, isdir, isfile
-from time import sleep
 
 CACHE_DIR = 'mining/edgar-downloads'
-ENABLE_CACHING = False
+ENABLE_CACHING = True
 
 def download(path):
     '''Download a copy of a file and cache it.
@@ -27,7 +27,6 @@ def download_no_cache(path):
              download = True
         except:
             download = False
-            sleep(1.0)
     print('cache.py: done downloading {path}'.format(**locals()))
     return raw_file
 

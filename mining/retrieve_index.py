@@ -1,3 +1,4 @@
+from __future__ import print_function
 from io import BytesIO
 from zipfile import ZipFile
 from re import sub

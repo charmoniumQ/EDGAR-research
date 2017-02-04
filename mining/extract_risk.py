@@ -14,7 +14,7 @@ sc = SparkContext(conf=conf)
 def process_index(index_info):
     path = index_info['Filename']
     try:
-        risk_factors = get_risk_factors(path)
+        risk_factors = get_risk_factors(path, debug=False)
     except ParseError as e:
         return (index_info['CIK'], (str(e), index_info['Date Filed']))
     else:
