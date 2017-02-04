@@ -1,4 +1,5 @@
 from __future__ import print_function
+import codecs
 import os
 import os.path
 from retrieve_index import get_index
@@ -32,7 +33,7 @@ while True:
         if predicate(risk_factors):
             print('Y', index_info['Company Name'])
             fname = os.path.join(directory, index_info['Company Name'] + '.txt')
-            with open(fname, 'w') as file:
+            with codecs.open(fname, 'w') as file:
                 file.write(index_info['CIK'])
                 file.write(risk_factors)
         else:
