@@ -32,7 +32,7 @@ while True:
         if predicate(risk_factors):
             print('Y', index_info['Company Name'])
             fname = os.path.join(directory, index_info['Company Name'] + '.txt')
-            with open(fname, 'w', 'utf-8') as file:
+            with open(fname, 'w', encoding='utf-8') as file:
                 file.write(index_info['CIK'])
                 file.write(risk_factors)
         else:
