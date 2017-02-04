@@ -9,7 +9,9 @@ def predicate(risk_factors):
     risk_factors = risk_factors.lower()
     # take = ('hacking' in risk_factors and 'spinach' not in risk factors) or 'lettuce' in risk_factors
     take = 'information security' in risk_factors
-    return take
+    start = 0
+    stop = 200
+    return take, start, stop
 
 
 directory = os.path.join('results', 'r')
@@ -29,11 +31,12 @@ while True:
     except Exception as e:
         pass
     else:
-        if predicate(risk_factors):
+        take, start, stop = predicate(risk_factors)
+        if take:
             print('Y', index_info['Company Name'])
             fname = os.path.join(directory, index_info['Company Name'] + '.txt')
             with open(fname, 'w', encoding='utf-8') as file:
-                file.write(index_info['CIK'])
-                file.write(risk_factors)
+                file.write('CIK = ' + str(index_info['CIK']))
+                file.write(risk_factors[start:stop])
         else:
             print('N', index_info['Company Name'])
