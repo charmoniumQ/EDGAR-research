@@ -72,12 +72,7 @@ def parse_index(index_file):
     for line in index_file:
        	elems = normalize(line)
        	# convert type of elem using the function associated with its column heading
-#        try:
-        #I'm just going to cast it as str, because it's failing with int
-        yield {heading: str(elem) for heading, elem in zip(col_headings, elems)}
-#        except ValueError:
-#            print("skipping index, dont know what's wrong")
-
+        yield {heading: types[heading](elem) for heading, elem in zip(col_headings, elems)}
 
 def get_index(year, qtr):
     '''Download the given index and cache it to disk.
