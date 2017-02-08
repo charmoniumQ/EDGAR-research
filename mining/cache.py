@@ -1,9 +1,10 @@
+from __future__ import print_function
 from urllib.request import urlopen
 from os import mkdir
 from os.path import join, isdir, isfile
-from time import sleep
 
 CACHE_DIR = 'mining/edgar-downloads'
+ENABLE_CACHING = True
 
 def download(path):
     '''Download a copy of a file and cache it.
@@ -26,7 +27,6 @@ def download_no_cache(path):
              download = True
         except:
             download = False
-            sleep(1.0)
     print('cache.py: done downloading {path}'.format(**locals()))
     return raw_file
 
@@ -39,21 +39,21 @@ def get(path):
     '''Attempt to retrieve file from cache, raising NotFound if not found.
     You are responseible for closing the file, if it is returned'''
     cache_path = _normalize(path)
-    if isfile(cache_path):
+    if ENABLE_CACHING and isfile(cache_path):
         return open(cache_path, 'rb')
     else:
         raise NotFound('Unable to find {path}'.format(**locals()))
 
 def put(path, file):
     '''Store file in the cache for path'''
-
-    cache_path = _normalize(path)
-    with open(cache_path, 'wb') as outfile:
-        if isinstance(file, (str, bytes)):
-            outfile.write(file)
-        else:
-            for line in file:
-                outfile.write(line)
+    if ENABLE_CACHING:
+        cache_path = _normalize(path)
+        with open(cache_path, 'wb') as outfile:
+            if isinstance(file, (str, bytes)):
+                outfile.write(file)
+            else:
+                for line in file:
+                    outfile.write(line)
 
 class NotFound(Exception):
     pass
