@@ -1,7 +1,7 @@
 #!/usr/lib/spark/bin/spark-submit
 from pyspark import SparkContext, SparkConf
-from retrieve_index import get_index
-from retrieve_10k import get_risk_factors, ParseError
+from mining.retrieve_index import get_index
+from mining.retrieve_10k import get_risk_factors, ParseError
 from glob import glob
 
 # http://spark.apache.org/docs/latest/configuration.html

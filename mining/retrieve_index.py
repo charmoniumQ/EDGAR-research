@@ -4,7 +4,8 @@ from zipfile import ZipFile
 from re import sub
 from itertools import islice
 from datetime import datetime
-import cache
+import sys
+import mining.cache as cache
 
 # ftp://ftp.sec.gov/edgar/daily-index/2016/QTR3/
 # ftp://ftp.sec.gov/edgar/full-index/2016/QTR3/
@@ -46,7 +47,11 @@ def normalize(line):
     line = line.decode() # turns binary string into ascii string
     line = line.strip() # removes trailing newline and leading spaces
     line = sub(' {2,}', '|', line) # 'a    b    c' -> 'a|b|c'
-    return line.split('|') # 'a|b|c' -> ['a', 'b', 'c']
+    elems = line.split('|') # 'a|b|c' -> ['a', 'b', 'c']
+    while len(elems) > 5:
+        elems[1] += ' ' + elems[2]
+        del elems[2]
+    return elems
 
 types = {
     # name_of_type: funciton_which_converts_to_that_type
@@ -72,7 +77,13 @@ def parse_index(index_file):
     for line in index_file:
        	elems = normalize(line)
        	# convert type of elem using the function associated with its column heading
-        yield {heading: types[heading](elem) for heading, elem in zip(col_headings, elems)}
+        try:
+            elems = {heading: types[heading](elem) for heading, elem in zip(col_headings, elems)}
+        except Exception as e:
+            print(elems)
+            raise e
+        else:
+            yield elems
 
 def get_index(year, qtr):
     '''Download the given index and cache it to disk.
@@ -89,9 +100,14 @@ Caches are stored in data/ directory
         raise ValueError('Quarter must be between 1 and 4')
 
     index_file = download_index(year, qtr, 'form')
+    found_10ks = False
     for index_record in parse_index(index_file):
         if index_record['Form Type'] == '10-K':
+            found_10ks = True
             yield index_record
+        else:
+            if found_10ks:
+                break
     index_file.close()
 
 if __name__ == '__main__':

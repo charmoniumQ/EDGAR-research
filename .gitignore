@@ -5,5 +5,4 @@ __pycache__/
 
 # ignore data
 mining/edgar-downloads
-mining/crap.txt
 results/
