@@ -2,6 +2,10 @@
 
 main="test.py"
 
-python2 setup.py bdist_egg
-sudo easy_install dist/EDGAR_research-0.1-py2.7.egg
+python3 setup.py bdist_egg || exit 1
+
+sudo easy_install3 dist/EDGAR_research-0.1-py3.4.egg || exit 1
+
+export PYSPARK_PYTHON=python3
+
 ./cluster_config/$main
