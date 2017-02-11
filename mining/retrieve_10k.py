@@ -2,7 +2,7 @@ from __future__ import print_function
 from os import mkdir
 from os.path import join
 import re
-from cache import download
+from mining.cache import download
 from bs4 import BeautifulSoup
 
 def html_to_text(textin, debug):
@@ -43,7 +43,7 @@ def html_to_text(textin, debug):
             pass
     except:
         if debug:
-            with open('10k_error.txt', 'w') as f:
+            with open('results/10k_error.txt', 'w') as f:
                 f.write(text)
         raise ParseError('Could not find part 1 (removing table of contents)')
     return text
@@ -62,7 +62,7 @@ def text_to_items(text, debug):
         # print a message on failure
         if not match:
             if debug:
-                with open('10k_error_{item}.txt'.format(**locals()), 'w') as f:
+                with open('results/10k_error_{item}.txt'.format(**locals()), 'w') as f:
                     f.write(text)
                 print('Could not find {item}'.format(**locals()))
         else:
@@ -145,14 +145,11 @@ def get_risk_factors(path, debug=True):
     else:
         raise ParseError('Item 1A not found')
 
-if __name__ == '__main__':
-    a = download('edgar/data/1382219/0001185185-16-004954.txt')
-    files = SGML_to_files(a.read())
-    a.close()
-    print('Parsed SGML document')
-    # extract_to_disk('output3', files)
-    b = parse_10k(files)
-    print({key: len(val) for key, val in b.items()})
-
 class ParseError(Exception):
     pass
+
+# Rox
+# OpenMPI
+# RabitMQ
+
+# 46 604
