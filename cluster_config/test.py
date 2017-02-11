@@ -5,9 +5,10 @@ from mining.retrieve_10k import get_risk_factors, ParseError
 from glob import glob
 
 # http://spark.apache.org/docs/latest/configuration.html
-conf = SparkConf().setAppName('EDGAR researcn').setMaster('local[*]')
-for pyfile in glob('*.py'):
-    conf.addPyFile(pyfile)
+conf = (SparkConf()
+        .setAppName('EDGAR researcn')
+        .setMaster('local[*]')
+        .addPyFile('dist/EDGAR_research-0.1-py2.7.egg'))
 sc = SparkContext(conf=conf)
 
 # https://spark.apache.org/docs/latest/programming-guide.html#rdd-operations
@@ -20,5 +21,6 @@ def process_index(index_info):
     else:
         return (index_info['CIK'], (risk_factors, index_info['Date Filed']))
 
-form_index = sc.parallelize(list(get_index(2016, 3)))
+from itertools import islice
+form_index = sc.parallelize(list(islice(get_index(2016, 3), 20)))
 form_index.map(process_index)
