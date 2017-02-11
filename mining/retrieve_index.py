@@ -4,7 +4,7 @@ from zipfile import ZipFile
 from re import sub
 from itertools import islice
 from datetime import datetime
-import sys
+from six.moves import input
 import mining.cache as cache
 
 # ftp://ftp.sec.gov/edgar/daily-index/2016/QTR3/

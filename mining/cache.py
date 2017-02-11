@@ -1,5 +1,5 @@
 from __future__ import print_function
-from urllib.request import urlopen
+from six.moves.urllib.request import urlopen
 from os import mkdir
 from os.path import join, isdir, isfile
 
