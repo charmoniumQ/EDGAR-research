@@ -15,12 +15,10 @@ form_index = get_index(2016, 3)
 print("Press enter for another risk factor. Press 'q' to quit.")
 #list(islice(form_index, 6))
 with open("char_count.txt", 'w') as char_count_file, open("stats.text", 'w') as stats_file:
-    while True:
-
+    for index_info in form_index:
         if good%10 == 0:
             print("SUB_TOTAL=", total)
 
-        index_info = next(form_index)
         path = index_info['Filename']
         print('Risk factors for ' + index_info['Company Name'])
         print('-'*70)
