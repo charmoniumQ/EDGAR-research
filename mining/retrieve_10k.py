@@ -45,7 +45,7 @@ def html_to_text(textin, debug):
             # this means there was no table of contents
             pass
     except:
-        if DEBUG or debug:
+        if DEBUG and debug:
             with open('results/10k_error.txt', 'w') as f:
                 f.write(text)
         raise ParseError('Could not find part 1 (removing table of contents)')
@@ -64,7 +64,8 @@ def text_to_items(text, debug):
 
         # print a message on failure
         if not match:
-            if DEBUG or debug:
+            if DEBUG and debug:
+                print('{DEBUG} {debug}'.format(**locals()))
                 with open('results/10k_error_{item}.txt'.format(**locals()), 'w') as f:
                     f.write(text)
             if VERBOSE:

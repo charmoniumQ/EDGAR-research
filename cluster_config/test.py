@@ -12,6 +12,39 @@ conf = (SparkConf()
 sc = SparkContext(conf=conf)
 sc.addPyFile('dist/EDGAR_research-0.1-py3.4.egg')
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # https://spark.apache.org/docs/latest/programming-guide.html#rdd-operations
 def mapi(index_info):
     path = index_info['Filename']
@@ -28,4 +61,4 @@ def reducei(i1, i2):
 form_index = sc.parallelize(list(get_index(2016, 3, enable_cache=False)))
 
 total, valid, size = form_index.map(mapi).reduce(reducei)
-print(total, valid, size, size / valid, valid / total)
+print('total = {total}, valid = {valid}, avg size = {0}, percent worked = {1}').format(size / valid, valid / total, **locals())
