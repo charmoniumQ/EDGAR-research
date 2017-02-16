@@ -65,6 +65,7 @@ def text_to_items(text, debug):
         # print a message on failure
         if not match:
             if DEBUG and debug:
+                pass
                 print('{DEBUG} {debug}'.format(**locals()))
                 with open('results/10k_error_{item}.txt'.format(**locals()), 'w') as f:
                     f.write(text)
