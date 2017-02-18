@@ -3,14 +3,17 @@ from itertools import islice
 from pyspark import SparkContext, SparkConf
 from mining.retrieve_index import get_index
 from mining.retrieve_10k import get_risk_factors, ParseError
+from glob import glob
 
 # http://spark.apache.org/docs/latest/configuration.html
 conf = (SparkConf()
         .setAppName('EDGAR research')
-        .setMaster('local[*]')
+        # .setMaster('spark://localhost:7077')
 )
 sc = SparkContext(conf=conf)
-sc.addPyFile('dist/EDGAR_research-0.1-py3.4.egg')
+for egg in glob('dist/*.egg'):
+    print('including', egg)
+    sc.addPyFile(egg)
 
 # https://spark.apache.org/docs/latest/programming-guide.html#rdd-operations
 def mapi(index_info):

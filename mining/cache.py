@@ -43,13 +43,16 @@ def _normalize(path):
 def get(path, enable_cache=True):
     '''Attempt to retrieve file from cache, raising NotFound if not found.
     You are responseible for closing the file, if it is returned'''
-    cache_path = _normalize(path)
     if enable_cache and ENABLE_CACHING and isfile(cache_path):
-        if VERBOSE: print('cache.py: retrieving  {path}'.format(**locals()))
-        file = open(cache_path, 'rb')
-        contents = file.read()
-        file.close()
-        return contents
+        cache_path = _normalize(path)
+        if isfile(cache_path):
+            if VERBOSE: print('cache.py: retrieving  {path}'.format(**locals()))
+            file = open(cache_path, 'rb')
+            contents = file.read()
+            file.close()
+            return contents
+        else:
+            raise NotFound('Unable to find {path}'.format(**locals()))                
     else:
         raise NotFound('Unable to find {path}'.format(**locals()))
 
