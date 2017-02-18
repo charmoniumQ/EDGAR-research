@@ -6,11 +6,11 @@ from analysis.new_directory import new_directory
 
 def predicate(company_name, CIK):
     # take = CIK == 9238 or company_name == 'blah'
-    take = company_name == 'ADM TRONICS UNLIMITED, INC.'
+    take = company_name.strip() == '3COM CORP'
     return take
 
 directory = new_directory(make=False)
-for index_info in get_index(2016, 3):
+for index_info in get_index(2000, 3):
     company_name = index_info['Company Name'].upper()
     CIK = index_info['CIK']
     if predicate(company_name, CIK):
