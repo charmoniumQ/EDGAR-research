@@ -5,7 +5,7 @@ from os.path import join, isdir, isfile
 
 CACHE_DIR = 'mining/edgar-downloads'
 ENABLE_CACHING = True
-VERBOSE = True
+VERBOSE = False
 
 def download(path, enable_cache=True):
     '''Download a copy of a file and cache it.
