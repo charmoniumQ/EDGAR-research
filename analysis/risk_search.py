@@ -2,6 +2,7 @@ from __future__ import print_function
 from mining.retrieve_index import get_index
 from mining.retrieve_10k import SGML_to_files, get_risk_factors
 from analysis.new_directory import new_directory
+import os
 
 # Change this
 def risk_predicate(risk_factors):
@@ -30,7 +31,7 @@ for index_info in get_index(2016, 3):
         except Exception as e:
             pass
         else:
-            take, start, stop = predicate(risk_factors)
+            take, start, stop = risk_predicate(risk_factors)
             if take:
                 print('Y', index_info['Company Name'])
                 fname = os.path.join(directory, index_info['Company Name'] + '.txt')
