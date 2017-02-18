@@ -15,6 +15,5 @@ for index_info in get_index(2000, 3):
     CIK = index_info['CIK']
     if predicate(company_name, CIK):
         raw_file = download(index_info['Filename'])
-        files = SGML_to_files(raw_file.read())
-        raw_file.close()
+        files = SGML_to_files(raw_file)
         extract_to_disk(directory, files)

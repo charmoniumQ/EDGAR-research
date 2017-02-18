@@ -5,6 +5,9 @@ import re
 from mining.cache import download
 from bs4 import BeautifulSoup
 
+VERBOSE = True
+DEBUG = True
+
 def html_to_text(textin, debug):
     '''Extract real text from HTML, after removing table of contents'''
 
@@ -42,7 +45,7 @@ def html_to_text(textin, debug):
             # this means there was no table of contents
             pass
     except:
-        if debug:
+        if DEBUG and debug:
             with open('results/10k_error.txt', 'w') as f:
                 f.write(text)
         raise ParseError('Could not find part 1 (removing table of contents)')
@@ -61,10 +64,13 @@ def text_to_items(text, debug):
 
         # print a message on failure
         if not match:
-            if debug:
+            if DEBUG and debug:
+                pass
+                print('{DEBUG} {debug}'.format(**locals()))
                 with open('results/10k_error_{item}.txt'.format(**locals()), 'w') as f:
                     f.write(text)
-                print('Could not find {item}'.format(**locals()))
+            if VERBOSE:
+                print('retrieve_10k.py: Could not find {item}'.format(**locals()))
         else:
 
             # store contents of match
@@ -74,7 +80,7 @@ def text_to_items(text, debug):
             text = text[match.end():]
     return contents
 
-def parse_10k(files, debug=True):
+def parse_10k(files, debug):
     '''Inputs a list of dicts (one dict for each file) aad returns a dict mapping from names (declared above) to strings of content'''
     for file_info in files:
         if file_info['type'] == '10-K':
@@ -83,8 +89,7 @@ def parse_10k(files, debug=True):
         raise ParseError('Cannot find the 10K')
 
     text = html_to_text(file_info['text'], debug)
-    if debug:
-        print('Normalized text...')
+    if VERBOSE: print('retrieve_10k.py: Normalized text...')
     return text_to_items(text, debug)
 
 
@@ -129,17 +134,12 @@ def SGML_to_files(sgml_contents):
             files[-1][tagname] = content
     return files
 
-def get_risk_factors(path, debug=True):
-    sgml = download(path)
-    files = SGML_to_files(sgml.read())
-    sgml.close()
-    # print('Parsed SGML document')
-    # try:
-    #     extract_to_disk(path.split('/')[2], files)
-    # except:
-    #     pass
-
+def get_risk_factors(path, enable_cache=True, debug=True):
+    sgml = download(path, enable_cache)
+    files = SGML_to_files(sgml)
+    if VERBOSE: print('retrieve_10k.py: started parsing')
     risk_factors = parse_10k(files, debug)
+    if VERBOSE: print('retrieve_10k.py: finished parsing')
     if '1A' in risk_factors:
         return risk_factors['1A']
     else:

@@ -25,3 +25,4 @@ wheels/
 # ignore data
 mining/edgar-downloads
 results/
+log.txt

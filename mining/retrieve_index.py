@@ -4,7 +4,7 @@ from zipfile import ZipFile
 from re import sub
 from itertools import islice
 from datetime import datetime
-import sys
+from six.moves import input
 import mining.cache as cache
 
 # ftp://ftp.sec.gov/edgar/daily-index/2016/QTR3/
@@ -13,20 +13,19 @@ import mining.cache as cache
 
 indexes = {'company', 'master', 'form'}
 
-def download_index_uncompressed(year, qtr, index):
-    '''Download the uncompressed .idx file. This takes a very long time.
-    You are responsible for closing the file.'''
+def download_index_uncompressed(year, qtr, index, enable_cache):
+    '''Download the uncompressed .idx file. This takes a very long time.'''
     # download the index file
     path = 'edgar/full-index/{year}/QTR{qtr}/{index}.idx'.format(**locals())
-    return cache.download(path)
+    return cache.download(path, enable_cache)
 
-def download_index(year, qtr, index):
+def download_index(year, qtr, index, enable_cache):
     '''Download the zip file and extract the .idx file from it.
     You are responsible for closing the file.'''
     compressed_path = 'edgar/full-index/{year}/QTR{qtr}/{index}.zip'.format(**locals())
     uncompressed_path = compressed_path + '_{index}.idx'.format(**locals())
     try:
-        return cache.get(uncompressed_path)
+        return cache.get(uncompressed_path, enable_cache)
     except cache.NotFound:
         compressed_file = cache.download_no_cache(compressed_path)
 
@@ -35,12 +34,13 @@ def download_index(year, qtr, index):
             # extract {index}.idx where {index} gets replaced with
             # 'company', 'master', or 'form'
             uncompressed_file = index_zip.open('{index}.idx'.format(**locals()))
-            if cache.ENABLE_CACHING:
-                cache.put(uncompressed_path, uncompressed_file)
-                uncompressed_file.close()
-                return cache.get(uncompressed_path)
+            if cache.ENABLE_CACHING and enable_cache:
+                cache.put(uncompressed_path, uncompressed_file, enable_cache)
+                return cache.get(uncompressed_path, enable_cache)
             else:
-                return uncompressed_file
+                contents = uncompressed_file.read()
+                uncompressed_file.close()
+                return contents
 
 def normalize(line):
     '''Returns an list of elements found on each line (uppercased)'''
@@ -69,6 +69,7 @@ def parse_index(index_file):
     '''Reads the filename and parses it (provided the file came from download_index or download)'''
     # the headings occur in a different order based on what index you are
     # looking at (eg. FORM TYPE comes first in the form.idx)
+    index_file = iter(index_file.split(b'\n'))
     heading_line = next(islice(index_file, 8, 9)) # get the 8th line
     col_headings = normalize(heading_line)
     # map items through aliases first and then types
@@ -85,7 +86,7 @@ def parse_index(index_file):
         else:
             yield elems
 
-def get_index(year, qtr):
+def get_index(year, qtr, enable_cache=True):
     '''Download the given index and cache it to disk.
 If a cached copy is available, use that instead.
 Caches are stored in data/ directory
@@ -99,7 +100,7 @@ Caches are stored in data/ directory
     if not (1 <= qtr <= 4):
         raise ValueError('Quarter must be between 1 and 4')
 
-    index_file = download_index(year, qtr, 'form')
+    index_file = download_index(year, qtr, 'form', enable_cache)
     found_10ks = False
     for index_record in parse_index(index_file):
         if index_record['Form Type'] == '10-K':
@@ -108,7 +109,6 @@ Caches are stored in data/ directory
         else:
             if found_10ks:
                 break
-    index_file.close()
 
 if __name__ == '__main__':
     form_index = get_index(2016, 3)

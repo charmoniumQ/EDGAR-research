@@ -2,6 +2,7 @@ from __future__ import print_function
 from itertools import islice
 from mining.retrieve_index import get_index
 from mining.retrieve_10k import SGML_to_files, get_risk_factors
+from six.moves import input
 
 form_index = get_index(2016, 3)
 print("Press enter for another risk factor. Press 'q' to quit.")
