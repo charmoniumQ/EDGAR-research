@@ -7,11 +7,11 @@ from analysis.new_directory import new_directory
 directory = new_directory()
 i = 0
 with open(directory + 'good.txt', 'w') as good, open(directory + 'bad.txt', 'w') as bad:
-    for index_info in get_index(2016, 3):
+    for index_info in get_index(2016, 3, enable_cache=True, verbose=False, debug=True):
         path = index_info['Filename']
         i += 1
         try:
-            get_risk_factors(path)
+            get_risk_factors(path, enable_cache=True, verbose=False, debug=True, wpath=directory)
         except Exception as e:
             print(i, index_info['Company Name'], 'bad')
             print(index_info['Company Name'], file=bad)

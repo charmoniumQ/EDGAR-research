@@ -16,28 +16,30 @@ def risk_predicate(risk_factors):
     if match is not None:
         start = match.start()
         stop = match.end()
+        return take, start, stop
     else:
-        start = 0
-        stop = 0
-    return take, start, stop
+        return False,  0, 0
 
-# uppercase list of filters
+# Company name filter: only search the following company names
+# Company names must be upercase and surrouned by quotes and separated by comma
 # if no companies are listed, no filter is applied
 # Change this
+# companies = ['COMPANY A', 'COMPANY B']
 companies = []
 
 directory = new_directory()
 
-for index_info in get_index(2017, 1):
-    company_name = index_info['Company Name'].upper()
+for index_info in get_index(2017, 1, enable_cache=True, verbose=False, debug=True):
+    company_name = index_info['Company Name']
     path = index_info['Filename']
 
     if not companies or company_name in companies:
-        print(company_name)
         try:
-            risk_factors = get_risk_factors(path, debug=True)
+            risk_factors = get_risk_factors(path, enable_cache=True, verbose=False, debug=True, wpath=directory)
         except Exception as e:
-            pass
+            print('Unable to get risk factors')
+            print(e)
+            import traceback; traceback.print_exc()
         else:
             take, start, stop = risk_predicate(risk_factors)
             if take:
@@ -49,5 +51,4 @@ for index_info in get_index(2017, 1):
                     file.write('CIK = ' + str(index_info['CIK'])+"\n")
                     file.write(risk_factors[start:stop])
             else:
-                # print('N', index_info['Company Name'])
-                pass
+                print('N', index_info['Company Name'])

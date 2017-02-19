@@ -11,19 +11,15 @@ total = 0
 
 
 
-form_index = get_index(2016, 3)
-print("Press enter for another risk factor. Press 'q' to quit.")
-#list(islice(form_index, 6))
+form_index = get_index(2016, 3, enable_cache=True, verbose=False, debug=True)
 with open("char_count.txt", 'w') as char_count_file, open("stats.text", 'w') as stats_file:
     for index_info in form_index:
         if good%10 == 0:
             print("SUB_TOTAL=", total)
 
         path = index_info['Filename']
-        print('Risk factors for ' + index_info['Company Name'])
-        print('-'*70)
         try:
-            risk_factor = get_risk_factors(path)
+            risk_factor = get_risk_factors(path, enable_cache=True, verbose=False, debug=True)
             size = len(risk_factor)
             print(size)
             print(size, file=char_count_file)
@@ -35,6 +31,7 @@ with open("char_count.txt", 'w') as char_count_file, open("stats.text", 'w') as 
             print('Unable to get')
             print(path)
             print(e)
+            import traceback; traceback.print_exc(); input()
             bad = bad + 1
         print('\n')
 
