@@ -3,12 +3,16 @@ from os import mkdir
 from os.path import join
 import re
 from mining.cache import download
-from bs4 import BeautifulSoup
+
+
+VERBOSE = True
+DEBUG = True
 
 VERBOSE = True
 DEBUG = True
 
 def html_to_text(textin, debug):
+    from bs4 import BeautifulSoup
     '''Extract real text from HTML, after removing table of contents'''
 
     textin = textin.decode()
@@ -65,7 +69,6 @@ def text_to_items(text, debug):
         # print a message on failure
         if not match:
             if DEBUG and debug:
-                pass
                 print('{DEBUG} {debug}'.format(**locals()))
                 with open('results/10k_error_{item}.txt'.format(**locals()), 'w') as f:
                     f.write(text)
