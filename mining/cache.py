@@ -3,7 +3,7 @@ from six.moves.urllib.request import urlopen
 from os import mkdir
 from os.path import join, isdir, isfile
 
-CACHE_DIR = 'mining/edgar-downloads'
+CACHE_DIR = 'results/edgar-downloads'
 ENABLE_CACHING = True
 VERBOSE = True
 

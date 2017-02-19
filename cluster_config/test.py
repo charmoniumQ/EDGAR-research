@@ -4,10 +4,15 @@ from pyspark import SparkContext, SparkConf
 from mining.retrieve_index import get_index
 from mining.retrieve_10k import get_risk_factors, ParseError
 from glob import glob
+import random
+import string
 
+i = ''.join(random.choice(string.ascii_lowercase) for i in range(10))
+name = 'EDGAR research ' + i
+print(name)
 # http://spark.apache.org/docs/latest/configuration.html
 conf = (SparkConf()
-        .setAppName('EDGAR research')
+        .setAppName(name)
         # .setMaster('spark://localhost:7077')
 )
 sc = SparkContext(conf=conf)
@@ -28,7 +33,10 @@ def mapi(index_info):
 def reducei(i1, i2):
     return tuple(x1 + y1 for x1, y1 in zip(i1, i2))
 
-form_index = sc.parallelize(list(get_index(2016, 3, enable_cache=False)))
+form_index = sc.parallelize(list(islice(get_index(2016, 3, enable_cache=False), 0, 100)))
 
 total, valid, size = form_index.map(mapi).reduce(reducei)
-print(total, valid, size, size / valid, valid / total)
+size = size / 1e6
+avg_size = size / valid / 1000
+hit_ratio = (valid / total)*100
+print('{size:.1f} MB in total, {avg_size:.0f} KB per doc, {valid} valid / {total} = {hit_ratio:.0f}%')

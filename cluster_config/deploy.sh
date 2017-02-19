@@ -1,34 +1,41 @@
 #!/bin/bash
 
-# run on remote machine in the working directory of the project
+cd `dirname $0`/.. # cd to project root
 
-cd `dirname $0`
-cd ..
+. ./cluster_config/util.sh
 
-. cluster_config/info.sh
+provision $cluster_name $zone || exit 1
+get_nodes $cluster_name $zone || exit 1
 
-rsync --archive --verbose --human-readable --compress --rsh="ssh -i $identity" --cvs-exclude . $user@$host:$dest \
-	  --exclude="*/__pycache__/*" --exclude="results/*" --exclude="mining/edgar-downloads/*"
-
-if [[ "$setup" = "yes" ]]
+if [[ ! $@ =~ "--skip-generic-conf" ]]
 then
-   ssh -i $identity $user@$host <<EOF
-sudo apt-get install -y python
-EOF
-fi	
-
-if [[ "$reinstall" = "yes" ]]
-then
-   ssh -i $identity $user@$host <<EOF
-cd $dest
-rm dist/*.egg
-python2 setup.py bdist_egg
-sudo easy_install-2.7 dist/*.egg
-EOF
+	for node in ${all_nodes[@]}; do
+		echo configuring $node $zone
+		configure_node $node $zone || exit 1
+	done
 fi
 
-ssh -i $identity $user@$host <<EOF
-export PYSPARK_PYTHON=python2
-cd $dest
-$main
-EOF
+if [[ ! $@ =~ "--skip-master-conf" ]]
+then
+	
+	for node in ${master_nodes[@]}; do
+		echo configuring master $node $zone
+		configure_master $node $zone || exit 1
+	done
+fi
+
+if [[ ! $@ =~ "--skip-slave-conf" ]]
+then
+	for node in ${slave_nodes[@]}; do
+		echo configuring slave $node $zone
+		configure_slave $node $zone || exit 1
+	done
+fi
+
+echo Running on ${master_nodes[1]} $zone
+run_spark3 ${master_nodes[1]} $zone
+
+if [[ ! $@ =~ "--persist-cluster" ]]
+then
+	deprovision $cluster_name $zone || exit 1
+fi 
