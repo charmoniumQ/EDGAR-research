@@ -4,7 +4,7 @@ from mining.retrieve_index import get_index
 from mining.retrieve_10k import SGML_to_files, get_risk_factors
 from six.moves import input
 
-form_index = get_index(2016, 3)
+form_index = get_index(2001, 3, enable_cache=True, verbose=False, debug=True)
 print("Press enter for another risk factor. Press 'q' to quit.")
 
 while input() == '':
@@ -13,7 +13,8 @@ while input() == '':
     print('Risk factors for ' + index_info['Company Name'])
     print('-'*70)
     try:
-        print(get_risk_factors(path)[:1000])
+        risks = get_risk_factors(path, enable_cache=True, verbose=False, debug=True)
+        print(risks[:1000])
     except Exception as e:
         print('Unable to get')
         print(path)
