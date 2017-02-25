@@ -11,6 +11,8 @@ total = 0
 
 
 
+print("Press enter for another risk factor. Press 'q' to quit.")
+#list(islice(form_index, 6))
 form_index = get_index(2016, 3, enable_cache=True, verbose=False, debug=True)
 with open("char_count.txt", 'w') as char_count_file, open("stats.text", 'w') as stats_file:
     for index_info in form_index:

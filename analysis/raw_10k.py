@@ -8,8 +8,7 @@ i = 0
 
 def predicate(company_name, CIK):
     # take = CIK == 9238 or company_name == 'blah'
-    take = i < 20
-    global i; i += 1
+    take = company_name.strip() == '3COM CORP'
     return take
 
 directory = new_directory()
