@@ -6,15 +6,19 @@ from mining.cache import download
 from bs4 import BeautifulSoup
 
 def get_risk_factors(path, enable_cache, verbose, debug, wpath=''):
+    items = get_items(path, enable_cache, verbose, debug, wpath)
+    if '1A' in items:
+        return items['1A']
+    else:
+        raise ParseError('Item 1A not found')
+
+def get_items(path, enable_cache, verbose, debug, wpath=''):
     sgml = download(path, enable_cache, verbose, debug)
     files = SGML_to_files(sgml, verbose, debug)
     if verbose: print('retrieve_10k.py: started parsing')
-    risk_factors = parse_10k(files, verbose, debug, wpath)
+    items = parse_10k(files, verbose, debug, wpath)
     if verbose: print('retrieve_10k.py: finished parsing')
-    if '1A' in risk_factors:
-        return risk_factors['1A']
-    else:
-        raise ParseError('Item 1A not found')
+    return items
 
 def SGML_to_files(sgml_contents, verbose, debug):
     '''Inputs the downloaded SGML and outputs a list of dicts (one dict for each file)

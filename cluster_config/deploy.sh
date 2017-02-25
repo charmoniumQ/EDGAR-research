@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 
 cd `dirname $0`/.. # cd to project root
 
@@ -7,7 +7,7 @@ cd `dirname $0`/.. # cd to project root
 provision $cluster_name $zone || exit 1
 get_nodes $cluster_name $zone || exit 1
 
-if [[ ! $@ =~ "--skip-generic-conf" ]]
+if [[ ! $@ =~ "--skip-conf" ]]
 then
 	for node in ${all_nodes[@]}; do
 		echo configuring $node $zone
@@ -15,27 +15,11 @@ then
 	done
 fi
 
-if [[ ! $@ =~ "--skip-master-conf" ]]
-then
-	
-	for node in ${master_nodes[@]}; do
-		echo configuring master $node $zone
-		configure_master $node $zone || exit 1
-	done
-fi
+echo Running on $master_node $zone
+upload_code $master_node $zone || exit 1
+run_spark3 $master_node $zone || exit 1
 
-if [[ ! $@ =~ "--skip-slave-conf" ]]
-then
-	for node in ${slave_nodes[@]}; do
-		echo configuring slave $node $zone
-		configure_slave $node $zone || exit 1
-	done
-fi
-
-echo Running on ${master_nodes[1]} $zone
-run_spark3 ${master_nodes[1]} $zone
-
-if [[ ! $@ =~ "--persist-cluster" ]]
+if [[ ! $@ =~ "--persist" ]]
 then
 	deprovision $cluster_name $zone || exit 1
 fi 
