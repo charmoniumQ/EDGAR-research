@@ -1,5 +1,7 @@
 from setuptools import setup, find_packages
 
+# this file is ignored
+
 setup(
     name="EDGAR-research",
     version="0.1",
