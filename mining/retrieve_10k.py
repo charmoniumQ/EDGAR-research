@@ -6,15 +6,20 @@ from mining.cache import download
 from bs4 import BeautifulSoup
 
 def get_risk_factors(path, enable_cache, verbose, debug, wpath=''):
-    sgml = download(path, enable_cache, verbose, debug)
-    files = SGML_to_files(sgml, verbose, debug)
-    if verbose: print('retrieve_10k.py: started parsing')
-    risk_factors = parse_10k(files, verbose, debug, wpath)
-    if verbose: print('retrieve_10k.py: finished parsing')
-    if '1A' in risk_factors:
-        return risk_factors['1A']
+    items = get_items(path, enable_cache, verbose, debug, wpath)
+    if '1A' in items:
+        return items['1A']
     else:
         raise ParseError('Item 1A not found')
+
+def get_items(path, enable_cache, verbose, debug, wpath=''):
+    sgml = download(path, enable_cache, verbose, debug)
+    if verbose: print('retrieve_10k.py: started parsing SGML')
+    files = SGML_to_files(sgml, verbose, debug)
+    if verbose: print('retrieve_10k.py: started parsing HTML')
+    items = parse_10k(files, verbose, debug, wpath)
+    if verbose: print('retrieve_10k.py: finished parsing')
+    return items
 
 def SGML_to_files(sgml_contents, verbose, debug):
     '''Inputs the downloaded SGML and outputs a list of dicts (one dict for each file)
@@ -42,8 +47,6 @@ def SGML_to_files(sgml_contents, verbose, debug):
             tagname = tagcontent.group(1).lower().decode()
             content = tagcontent.group(2).decode()
             files[-1][tagname] = content
-        if verbose:
-            print(files[-1]['filename'], {k: v for k, v in files[-1].items() if k not in ['text', 'filename']})
     return files
 
 def extract_to_disk(directory, files, verbose, debug):
@@ -115,7 +118,13 @@ def html_to_text(textin, verbose, debug, path=''):
     if debug:
         with open(path + 'clean_html_text.txt', 'w') as f: f.write(textin)
 
+    # remove ALL HTML tags.
+    # this makes beautiful soup take less time to parse it
+    textin = re.sub('<.*?>', '', textin)
+    for bad_html_char in ['\&#149;', '\&#151;']:
+        textin = textin.replace(bad_html_char, "[weird character sam couldn't figure out]")
     # parse as HTML and extract text
+
     html_10k = BeautifulSoup(textin, 'html.parser')
     text = html_10k.text
 
@@ -130,7 +139,12 @@ def clean_text(text, verbose, debug, path=''):
 
     # replace multiple spaces with a single one
     # multiple spaces is not semantically significant and it complicates regex later
+    text = re.sub('\t', ' ', text)
     text = re.sub('  +', ' ', text)
+
+    # turn bullet-point + whitespace + text to bulletpoint + space + text
+    bullets = '([\u25cf\u00b7\u2022])'
+    text = re.sub(bullets + r'\s+', '\1 ', text)
 
     # ya know...
     text = re.sub('\r', '\n', text)
@@ -150,27 +164,27 @@ def clean_text(text, verbose, debug, path=''):
     # text is header, optional table of contents, anf body
     # table of contents starts with "Part I"
     # body starts with "Part I"
-    try:
-        # trim header
-        # note that the [\. \n] is necessary otherwise the regex will match "part ii"
-        # note that the begining of line anchor is necessary because 
-        parti = re.search('^part i[\. \n]', text, re.MULTILINE | re.IGNORECASE)
-        text = text[parti.end():]
-        
-        # remove table of contents, if it exists
-        parti = re.search('^part i[\. \n]', text, re.MULTILINE | re.IGNORECASE)
-        if parti:
-            text = text[parti.end():]
-        else:
-            # this means there was no table of contents
-            pass
-    except:
+
+    # trim header
+    # note that the [\. \n] is necessary otherwise the regex will match "part ii"
+    # note that the begining of line anchor is necessary because 
+    parti = re.search('^part i[\. \n]', text, re.MULTILINE | re.IGNORECASE)
+    if parti is None:
         if debug:
             with open(path + '10k_error.txt', 'w', encoding='utf-8') as f:
                 f.write(text)
         raise ParseError('Could not find "Part I" to remove header')
-    if verbose:
-        print('cleaned size', len(text))
+    text = text[parti.end():]
+
+    # remove table of contents, if it exists
+    parti = re.search('^part i[\. \n]', text, re.MULTILINE | re.IGNORECASE)
+    if parti:
+        text = text[parti.end():]
+    else:
+        # this means there was no table of contents
+        pass
+
+    print('cleaned size', len(text))
     return text
 
 items = ['Item 1', 'Item 1A', 'Item 1B', 'Item 2', 'Item 3', 'Item 4', 'Item 5', 'Item 6', 'Item 7', 'Item 7A', 'Item 8', 'Item 9', 'Item 9A', 'Item 9B', 'Item 10', 'Item 11', 'Item 12', 'Item 13', 'Item 14', 'Item 15', 'Signatures']
