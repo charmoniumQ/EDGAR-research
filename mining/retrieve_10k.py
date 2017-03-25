@@ -78,19 +78,19 @@ def parse_10k(files, verbose, debug, path=''):
         text = file_info['text'].decode()
 
     if debug:
-        with open(path + 'raw_text.txt', 'w') as f: f.write(text)
+        with open(path + 'raw_text.txt', 'w', encoding='utf-8') as f: f.write(text)
     if verbose: print('retrieve_10k.py: Normalized html...')
 
     text = clean_text(text, verbose, debug, path)
 
     if debug:
-        with open(path + 'clean_text.txt', 'w') as f: f.write(text)
+        with open(path + 'clean_text.txt', 'w', encoding='utf-8') as f: f.write(text)
     if verbose: print('retrieve_10k.py: Normalized text...')
 
     items_10k = text_to_items(text, verbose, debug, path)
 
     if debug:
-        with open(path + 'items_text.txt', 'w') as f:
+        with open(path + 'items_text.txt', 'w', encoding='utf-8') as f:
             for item, text in sorted(items_10k.items()):
                 f.write(item + '\n' + text + '\n')
 
@@ -166,7 +166,7 @@ def clean_text(text, verbose, debug, path=''):
             pass
     except:
         if debug:
-            with open(path + '10k_error.txt', 'w') as f:
+            with open(path + '10k_error.txt', 'w', encoding='utf-8') as f:
                 f.write(text)
         raise ParseError('Could not find "Part I" to remove header')
     if verbose:
@@ -187,7 +187,7 @@ def text_to_items(text, verbose, debug, path=''):
         if item_match is None:
             if debug:
                 print('no', item)
-                with open(path + item.lower() + '.txt', 'w') as f:
+                with open(path + item.lower() + '.txt', 'w', encoding='utf-8') as f:
                     f.write(text)
 
             # this item does not exist. skip
