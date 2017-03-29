@@ -1,10 +1,17 @@
 import csv
 import os.path
 
-paragraphFilePath = "data/paragraphs.csv"
-responseFilePath = "data/responses.csv"
-
 responseDictionary = {}
+
+# Login with username
+username = input("Please enter username: ")
+while username == "":
+    username = input("Error: username can't be blank\nPlease enter username: ")
+
+paragraphFilePath = "data/paragraphs.csv"
+responseFilePath = "data/responses_" + username + ".csv"
+
+
 # create the response file if it doesn't exist
 if os.path.isfile(responseFilePath):
     with open(responseFilePath, "r") as responseFile:
