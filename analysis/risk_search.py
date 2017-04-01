@@ -8,17 +8,15 @@ import re
 # Change this
 def risk_predicate(risk_factors):
     risk_factors = risk_factors.lower()
-    # take = ('hacking' in risk_factors and 'spinach' not in risk factors) or 'lettuce' in risk_factors'
-    # \n is a newline
-    # .*? takes as FEW characters as possible, but as many as are needed
-    match = re.search(".*?\n.*?\n.*?climate change.*?\n.*?\n.*?",risk_factors,re.MULTILINE | re.IGNORECASE)
-    take = match is not None
-    if match is not None:
-        start = match.start()
-        stop = match.end()
-        return take, start, stop
+    if re.search('climate change', risk_factors):
+        # \n is a newline
+        # .*? takes as FEW characters as possible, but as many as are needed
+        take_text = []
+        for hit in  re.finditer(".*?\n.*?\n.*?climate change.*?\n.*?\n.*?", risk_factors):
+            take_text.append(hit.group(0))
+        return True, ('\n' + '='*79).join(take_text)
     else:
-        return False,  0, 0
+        return False, ''
 
 # Company name filter: only search the following company names
 # Company names must be upercase and surrouned by quotes and separated by comma
@@ -29,7 +27,7 @@ companies = []
 
 directory = new_directory()
 
-for index_info in get_index(2017, 1, enable_cache=True, verbose=False, debug=True):
+for index_info in get_index(2016, 1, enable_cache=True, verbose=False, debug=True):
     company_name = index_info['Company Name']
     path = index_info['Filename']
 
@@ -41,14 +39,13 @@ for index_info in get_index(2017, 1, enable_cache=True, verbose=False, debug=Tru
             print(e)
             import traceback; traceback.print_exc()
         else:
-            take, start, stop = risk_predicate(risk_factors)
+            take, text = risk_predicate(risk_factors)
             if take:
                 print('Y', index_info['Company Name'])
                 basename = index_info['Company Name'].replace('/', '_').replace('\\', '_')
                 fname = os.path.join(directory, basename + '.txt')
 
                 with open(fname, 'w', encoding='utf-8') as file:
-                    file.write('CIK = ' + str(index_info['CIK'])+"\n")
-                    file.write(risk_factors[start:stop])
+                    file.write(text)
             else:
                 print('N', index_info['Company Name'])
