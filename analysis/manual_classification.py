@@ -3,6 +3,7 @@ try:
     import csv
     import getch
     import os
+    import textwrap
     
     if 'analysis' in os.getcwd():
         os.chdir('..')
@@ -33,14 +34,15 @@ try:
     
     print("+Found", len(responseDictionary), " previously recorded responses by", username, "\n")
     quit = False
-    
+
+
     # Go through the remaining paragraphs and record the user's response in the corresponding response file.
     with open(paragraphFilePath) as paragraphFile, open(responseFilePath, "a", newline="") as responseFile:
         paragraphReader = csv.DictReader(paragraphFile)
         responseWriter = csv.writer(responseFile)
         for paragraph in paragraphReader:
             if paragraph['number'] not in responseDictionary.keys():
-                print("#%s [%s]:\n %s" % (paragraph['number'], paragraph['address'], paragraph['text']))
+                print("#%s [%s]:\n %s" % (paragraph['number'], paragraph['address'], textwrap.fill(paragraph['text'])))
                 print("-Is this related to topic? (Y/N/F), or q to quit   ")
                 userResponse = getch.getch()
                 if isinstance(userResponse, bytes):
