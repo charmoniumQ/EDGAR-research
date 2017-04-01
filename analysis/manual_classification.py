@@ -2,6 +2,11 @@ import csv
 import os.path
 import getch
 
+import os
+if 'analysis' in os.getcwd():
+    os.chdir('..')
+print(os.getcwd())
+
 # Login with username
 username = input("-Please enter username: ")
 while username == "":
