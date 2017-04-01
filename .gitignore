@@ -27,3 +27,5 @@ mining/edgar-downloads
 results/
 log.txt
 data/
+.project
+.pydevproject
