@@ -56,8 +56,9 @@ try:
                 field = [paragraph['number'], userResponse.upper()]
                 responseWriter.writerow(field)
     responseFile.close()
+    if not quit:
+        getch.pause("DONE! Press any key to continue...")
+
 except:
     traceback.print_exc()
 
-if not quit:
-    getch.pause("DONE! Press any key to continue...")
