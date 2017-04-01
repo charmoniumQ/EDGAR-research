@@ -30,6 +30,7 @@ else:
     responseFile.close()
 
 print("+Found", len(responseDictionary), " previously recorded responses by", username, "\n")
+quit = False
 
 # Go through the remaining paragraphs and record the user's response in the corresponding response file.
 with open(paragraphFilePath) as paragraphFile, open(responseFilePath, "a", newline="") as responseFile:
@@ -46,9 +47,13 @@ with open(paragraphFilePath) as paragraphFile, open(responseFilePath, "a", newli
                 print("-Bad input... Is this related to topic? (Y/N/F), q to quit   ")
                 userResponse = getch.getch()
             if userResponse.lower() == 'q':
+                quit = True
                 break
             print("+Your response, %s, is recorded\n" % userResponse.upper())
             responseDictionary[paragraph['number']] = userResponse
             field = [paragraph['number'], userResponse.upper()]
             responseWriter.writerow(field)
 responseFile.close()
+
+if not quit:
+    getch.pause("DONE! Press any key to continue...")
