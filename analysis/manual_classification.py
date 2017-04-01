@@ -39,12 +39,14 @@ with open(paragraphFilePath) as paragraphFile, open(responseFilePath, "a", newli
     for paragraph in paragraphReader:
         if paragraph['number'] not in responseDictionary.keys():
             print("#%s: %s" % (paragraph['number'], paragraph['text']))
-            print("-Is this related to topic? (Y/N/F), or quit   ")
+            print("-Is this related to topic? (Y/N/F), or q to quit   ")
             userResponse = getch.getch()
-            while userResponse not in ('y', 'n', 'Y', 'N', 'f', 'F', 'quit'):
-                print("-Bad input... Is this related to topic? (Y/N/F)   ")
+            if isinstance(userResponse, bytes):
+                userResponse = userResponse.decode()
+            while userResponse not in ('y', 'n', 'Y', 'N', 'f', 'F', 'q', 'Q'):
+                print("-Bad input... Is this related to topic? (Y/N/F), q to quit   ")
                 userResponse = getch.getch()
-            if userResponse == 'quit':
+            if userResponse.lower() == 'q':
                 break
             print("+Your response, %s, is recorded\n" % userResponse.upper())
             responseDictionary[paragraph['number']] = userResponse
