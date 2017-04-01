@@ -40,7 +40,7 @@ try:
         responseWriter = csv.writer(responseFile)
         for paragraph in paragraphReader:
             if paragraph['number'] not in responseDictionary.keys():
-                print("#%s: %s" % (paragraph['number'], paragraph['text']))
+                print("#%s [%s]:\n %s" % (paragraph['number'], paragraph['address'], paragraph['text']))
                 print("-Is this related to topic? (Y/N/F), or q to quit   ")
                 userResponse = getch.getch()
                 if isinstance(userResponse, bytes):
