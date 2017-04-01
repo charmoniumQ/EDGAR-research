@@ -1,11 +1,11 @@
 import csv
 import os.path
+import getch
 
 # Login with username
 username = input("-Please enter username: ")
 while username == "":
     username = input("Error: username can't be blank\nPlease enter username: ")
-
 
 # File paths used
 paragraphFilePath = "data/paragraphs.csv"
@@ -34,9 +34,11 @@ with open(paragraphFilePath) as paragraphFile, open(responseFilePath, "a", newli
     for paragraph in paragraphReader:
         if paragraph['number'] not in responseDictionary.keys():
             print("#%s: %s" % (paragraph['number'], paragraph['text']))
-            userResponse = input("-Is this related to topic? (Y/N), or quit   ")
-            while userResponse not in ('y', 'n', 'Y', 'N', 'quit'):
-                userResponse = input("-Bad input... Is this related to topic? (Y/N)   ")
+            print("-Is this related to topic? (Y/N/F), or quit   ")
+            userResponse = getch.getch()
+            while userResponse not in ('y', 'n', 'Y', 'N', 'f', 'F', 'quit'):
+                print("-Bad input... Is this related to topic? (Y/N/F)   ")
+                userResponse = getch.getch()
             if userResponse == 'quit':
                 break
             print("+Your response, %s, is recorded\n" % userResponse.upper())
