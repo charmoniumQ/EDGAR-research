@@ -5,12 +5,18 @@ import re
 from mining.cache import download
 from bs4 import BeautifulSoup
 
-def get_risk_factors(path, enable_cache, verbose, debug, wpath=''):
-    items = get_items(path, enable_cache, verbose, debug, wpath)
-    if '1A' in items:
-        return items['1A']
-    else:
-        raise ParseError('Item 1A not found')
+def get_risk_factors(path, enable_cache, verbose, debug, throw=True, wpath=''):
+    try:
+        items = get_items(path, enable_cache, verbose, debug, wpath)
+        if '1A' in items:
+            return items['1A']
+        else:
+            raise ParseError('Item 1A not found')
+    except Exception as e:
+        if throw:
+            raise e
+        else:
+            return
 
 def get_items(path, enable_cache, verbose, debug, wpath=''):
     sgml = download(path, enable_cache, verbose, debug)
@@ -134,17 +140,15 @@ def html_to_text(textin, verbose, debug, path=''):
     return text
 
 def clean_text(text, verbose, debug, path=''):
-    if verbose:
-        print('starting size', len(text))
+    if verbose: print('starting size', len(text))
 
     # replace multiple spaces with a single one
     # multiple spaces is not semantically significant and it complicates regex later
     text = re.sub('\t', ' ', text)
-    text = re.sub('  +', ' ', text)
 
     # turn bullet-point + whitespace + text to bulletpoint + space + text
     bullets = '([\u25cf\u00b7\u2022])'
-    text = re.sub(bullets + r'\s+', '\1 ', text)
+    text = re.sub(bullets + r'\s+', '\n ', text)
 
     # ya know...
     text = re.sub('\r', '\n', text)
@@ -160,6 +164,9 @@ def clean_text(text, verbose, debug, path=''):
 
     # double newline -> newline (now that single newlines are removed)
     text = re.sub('\n+', '\n', text)
+
+
+    text = re.sub('  +', ' ', text)
 
     # text is header, optional table of contents, anf body
     # table of contents starts with "Part I"
@@ -184,7 +191,7 @@ def clean_text(text, verbose, debug, path=''):
         # this means there was no table of contents
         pass
 
-    print('cleaned size', len(text))
+    if verbose: print('cleaned size', len(text))
     return text
 
 items = ['Item 1', 'Item 1A', 'Item 1B', 'Item 2', 'Item 3', 'Item 4', 'Item 5', 'Item 6', 'Item 7', 'Item 7A', 'Item 8', 'Item 9', 'Item 9A', 'Item 9B', 'Item 10', 'Item 11', 'Item 12', 'Item 13', 'Item 14', 'Item 15', 'Signatures']
