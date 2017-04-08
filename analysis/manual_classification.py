@@ -4,10 +4,28 @@ try:
     import getch
     import os
     import textwrap
+    import glob
     
     if 'analysis' in os.getcwd():
         os.chdir('..')
     print(os.getcwd())
+
+    # Get all paragraph files in the data folder and display them to the user. Terminate if there are no paragraph files
+
+    files = glob.glob("data/paragraphs_*_*.csv")
+    if len(files) == 0:
+        print("no paragraph files available :(")
+        os._exit(0)
+
+    for filePath in files:
+        print("[%d] %s" % (files.index(filePath), filePath))
+
+    # Let user select which paragraph file to work on
+
+    userResponse = input("-Please select the paragraph file to process (enter the number displayed to the left)")
+    while len(files) <= int(userResponse):
+        userResponse = input("-Bad input\n-Please select the paragraph file to process "
+                             "(enter the number displayed to the left)")
     
     # Login with username
     username = input("-Please enter username: ")
@@ -15,8 +33,8 @@ try:
         username = input("Error: username can't be blank\nPlease enter username: ")
     
     # File paths used
-    paragraphFilePath = "data/paragraphs.csv"
-    responseFilePath = "data/responses_" + username + ".csv"
+    paragraphFilePath = files[int(userResponse)]
+    responseFilePath = paragraphFilePath.replace("paragraphs", "responses").replace(".csv", "") + "_" + username + ".csv"
     
     # Dictionary to hold previously entered responses
     responseDictionary = {}
@@ -34,7 +52,6 @@ try:
     
     print("+Found", len(responseDictionary), " previously recorded responses by", username, "\n")
     quit = False
-
 
     # Go through the remaining paragraphs and record the user's response in the corresponding response file.
     with open(paragraphFilePath) as paragraphFile, open(responseFilePath, "a", newline="") as responseFile:
