@@ -54,7 +54,7 @@ def normalize(line):
 
 types = {
     # name_of_type: funciton_which_converts_to_that_type
-    'Form Type': str,
+    'Form Type': lambda x: str(x).lower(),
     'Company Name': lambda x: str(x).upper(),
     'CIK': int,
     'Date Filed': lambda s: datetime.strptime(s, '%Y-%m-%d').date(),
@@ -85,7 +85,8 @@ def parse_index(index_file):
         else:
             yield elems
 
-def get_index(year, qtr, enable_cache, verbose, debug):
+
+def get_index(year, qtr, enable_cache, verbose, debug, type = "10-k"):
     '''Download the given index and cache it to disk.
 If a cached copy is available, use that instead.
 Caches are stored in data/ directory
@@ -102,13 +103,11 @@ Caches are stored in data/ directory
     index_file = download_index(year, qtr, 'form', enable_cache, verbose, debug)
     found_10ks = False
     for index_record in parse_index(index_file):
-        if index_record['Form Type'] == '10-K':
+        if index_record['Form Type'] == type:
             found_10ks = True
             yield index_record
         else:
             if found_10ks:
                 break
-
-
 
 __all__ = ['get_index']
