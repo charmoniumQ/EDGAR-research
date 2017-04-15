@@ -6,6 +6,7 @@ try:
     import textwrap
     import glob
 
+
     def getch():
         userResponse = real_getch()
         if isinstance(userResponse, bytes):
@@ -85,4 +86,3 @@ try:
 
 except:
     traceback.print_exc()
-

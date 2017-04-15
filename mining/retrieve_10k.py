@@ -18,6 +18,7 @@ def get_risk_factors(path, enable_cache, verbose, debug, throw=True, wpath=''):
         else:
             return
 
+
 def get_items(path, enable_cache, verbose, debug, wpath=''):
     sgml = download(path, enable_cache, verbose, debug)
     if verbose: print('retrieve_10k.py: started parsing SGML')
@@ -26,6 +27,7 @@ def get_items(path, enable_cache, verbose, debug, wpath=''):
     items = parse_10k(files, verbose, debug, wpath)
     if verbose: print('retrieve_10k.py: finished parsing')
     return items
+
 
 def SGML_to_files(sgml_contents, verbose, debug):
     '''Inputs the downloaded SGML and outputs a list of dicts (one dict for each file)
