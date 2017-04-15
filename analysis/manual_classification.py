@@ -1,10 +1,16 @@
 try:
     import traceback
     import csv
-    import getch
+    from getch import getch as real_getch
     import os
     import textwrap
     import glob
+
+    def getch():
+        userResponse = real_getch()
+        if isinstance(userResponse, bytes):
+            userResponse = userResponse.decode()
+        return userResponse
     
     if 'analysis' in os.getcwd():
         os.chdir('..')
@@ -61,12 +67,10 @@ try:
             if paragraph['number'] not in responseDictionary.keys():
                 print("#%s [%s]:\n %s" % (paragraph['number'], paragraph['address'], textwrap.fill(paragraph['text'])))
                 print("-Is this related to topic? (Y/N/F), or q to quit   ")
-                userResponse = getch.getch()
-                if isinstance(userResponse, bytes):
-                    userResponse = userResponse.decode()
+                userResponse = getch()
                 while userResponse not in ('y', 'n', 'Y', 'N', 'f', 'F', 'q', 'Q'):
                     print("-Bad input... Is this related to topic? (Y/N/F), q to quit   ")
-                    userResponse = getch.getch()
+                    userResponse = getch()
                 if userResponse.lower() == 'q':
                     quit = True
                     break
@@ -74,6 +78,7 @@ try:
                 responseDictionary[paragraph['number']] = userResponse
                 field = [paragraph['number'], userResponse.upper()]
                 responseWriter.writerow(field)
+                responseFile.flush()
     responseFile.close()
     if not quit:
         getch.pause("DONE! Press any key to continue...")
