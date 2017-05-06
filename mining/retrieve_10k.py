@@ -126,6 +126,8 @@ def html_to_text(textin, verbose, debug, path=''):
     if debug:
         with open(path + 'clean_html_text.txt', 'w') as f: f.write(textin)
 
+    # TODO: consider removing all <a> tags and their contents
+
     # remove ALL HTML tags.
     # this makes beautiful soup take less time to parse it
     textin = re.sub('<.*?>', '', textin)
@@ -148,14 +150,14 @@ def clean_text(text, verbose, debug, path=''):
     # multiple spaces is not semantically significant and it complicates regex later
     text = re.sub('\t', ' ', text)
 
-    # turn bullet-point + whitespace + text to bulletpoint + space + text
-    bullets = '([\u25cf\u00b7\u2022])'
+    # turn bullet-point + newline/whitespace + text to bulletpoint + space + text
+    bullets = '([\u25cf\u00b7\u2022\x95])'
     text = re.sub(bullets + r'\s+', '\n ', text)
 
     # ya know...
     text = re.sub('\r', '\n', text)
 
-    # strip leading and trailing spaces (now that mulitiple spaces arec collapsed and \r -> \n)
+    # strip leading and trailing spaces (now that mulitiple spaces are collapsed and \r -> \n)
     # these are note semantically significant and it complicates regex later on
     text = re.sub('\n ', '\n', text)
     text = re.sub(' \n', '\n', text)    
