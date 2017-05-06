@@ -61,7 +61,7 @@ try:
     quit = False
 
     # Go through the remaining paragraphs and record the user's response in the corresponding response file.
-    with open(paragraphFilePath) as paragraphFile, open(responseFilePath, "a", newline="") as responseFile:
+    with open(paragraphFilePath, encoding='utf-8') as paragraphFile, open(responseFilePath, "a", newline="") as responseFile:
         paragraphReader = csv.DictReader(paragraphFile)
         responseWriter = csv.writer(responseFile)
         for paragraph in paragraphReader:
