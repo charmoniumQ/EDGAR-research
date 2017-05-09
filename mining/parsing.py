@@ -40,7 +40,10 @@ def find_form(fileinfos, form_type):
         raise ParseError('Cannot find the 10K')
 
 def is_html(text):
-    return '</p>' in text or '</P>' in text or '</div>' in text or '</DIV>' in text or '</td>' in text or '</TD>' in text
+    tags = 'p div td'.split(' ')
+    tags += [tag.upper() for tag in tags]
+    return any('</{tag}>'.format(**locals()) in text
+               for tag in tags)
 
 def clean_html(html):
     '''Puts newlines where they belong in HTML and removes tags'''
@@ -52,13 +55,14 @@ def clean_html(html):
 
     # replace newline-inducing tags with linebreaks
     # tags are treated as significant dividing marks
-    newline_tags = 'p div tr br P DIV TR BR'.split(' ')
+    newline_tags = 'p div tr br h1 h2 h3 h4 h5'.split(' ')
+    newline_tags += [tag.upper() for tag in newline_tags]
     for tag in newline_tags:
         html = html.replace('</{tag}>'.format(**locals()), 'my-escape-newlines\n</{tag}>'.format(**locals()))
         html = html.replace('<{tag} />'.format(**locals()), 'my-escape-newlines\n<{tag} />'.format(**locals()))
 
-    # TODO: this might be too egregious
-    html = re.sub('<a.*?</a>', '', html)
+    # this is too egregious.
+    # html = re.sub('<a.*?</a>', '', html)
 
     return html
 
@@ -159,7 +163,7 @@ def text_to_items(text, items):
             if isinstance(item, tuple):
                 name = item[1]
             else:
-                name = item.lower().replace("item", "")
+                name = item.lower().replace("item ", "")
             contents[name] = text
             break
 
@@ -167,7 +171,7 @@ def text_to_items(text, items):
         if isinstance(item, tuple):
             name = item[1]
         else:
-            name = item.lower().replace("item", "")
+            name = item.lower().replace("item ", "")
         contents[name] = text[:next_item_match.start()]
         # trim text
         text = text[next_item_match.start():]

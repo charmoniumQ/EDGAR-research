@@ -3,18 +3,18 @@ import itertools
 import mining.cache as cache
 import mining.parsing as parsing
 
-def get_departure_of_directors_or_certain_officers(path, enable_cache, verbose, debug, throw=True, wpath=''):
+def get_departure_of_directors_or_certain_officers(path, enable_cache):
     try:
-        items = get_items(path, enable_cache, verbose, debug, wpath)
+        items = get_10k_items(path, enable_cache)
         if '5.02' in items:
             return items['5.02']
         else:
-            raise ParseError('Item 5.02 not found')
+            raise parsing.ParseError('Item 1A not found')
     except Exception as e:
         if throw:
             raise e
         else:
-            return
+            return None
 
 item_headers = ['Item 1.01', 'Item 1.02', 'Item 1.03', 'Item 1.04',
          'Item 2.01', 'Item 2.02', 'Item 2.03', 'Item 2.04', 'Item 2.05', 'Item 2.06',

@@ -16,3 +16,5 @@ def paragraphs(text):
         if sentence:
             # guard against sentences which at this point are blank
             yield sentence
+
+# lines with no alphabetic characters (excluding page or p or table of contents)

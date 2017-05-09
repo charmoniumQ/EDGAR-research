@@ -7,14 +7,14 @@ from mining.retrieve_8k import get_8k_items
 from util.new_directory import new_directory
 
 year = 2016
-qtr = 1
-form_type = '8-k' # user lower-case
+qtr = 3
+form_type = '10-k' # user lower-case
 
 def predicate(index_info):
     # index_info['Company Name']
     # index_info['CIK']
     # i
-    return i < 10
+    return index_info['Company Name'] == 'AMERICAN SOFTWARE INC'
 
 base_dir = new_directory()
 print('Results in ' + base_dir.as_posix())

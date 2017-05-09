@@ -4,6 +4,19 @@ import itertools
 import mining.cache as cache
 import mining.parsing as parsing
 
+def get_risk_factors(path, enable_cache, throw):
+    try:
+        items = get_10k_items(path, enable_cache)
+        if '1a' in items:
+            return items['1a']
+        else:
+            raise parsing.ParseError('Item 1A not found')
+    except Exception as e:
+        if throw:
+            raise e
+        else:
+            return None
+
 item_headers = [
     'Item 1', 'Item 1A', 'Item 1B', 'Item 2', 'Item 3', 'Item 4', 'Item 5',
     'Item 6', 'Item 7', 'Item 7A', 'Item 8', 'Item 9', 'Item 9A', 'Item 9B',
