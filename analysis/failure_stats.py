@@ -7,11 +7,29 @@ import datetime
 import sys
 import traceback
 
+'''
+This script computes the failure/success rate of form parsing.
+It also prints the time taken to parse the documents, and the size of the
+selected item in each document.
+
+year (int)
+qtr (int): must be 1 through 4
+form_type: lowercase string (must be '10-k' and '8-k')
+stop_at: (int or None)
+  if stop_at is an int, it computes the failure rate among the first `stop_at`
+  documents.
+  If stop_at is None, it computes the failure rate for all of the documents in
+  that quarter.
+item: (must be '1a' or '5.02' or something similar) the item to select from each
+  form. This script will measure the size of that item.
+'''
 form_type = '10-k'
 year = 2016
 qtr = 3
-stop_at = 100
+stop_at = None
+item = '1a'
 
+# select function for getting form
 if form_type == '10-k':
     get_document = get_10k_items
     kwargs = dict(enable_cache=True)
@@ -23,50 +41,69 @@ else:
 
 directory = new_directory()
 print('Results in ' + directory.as_posix())
+
+# Write info text file
 with (directory / 'info.txt').open('w') as info:
-    info.write('''
+    info.write('''script: {__file__}
 form_type: {form_type}
 year: {year}
 qtr: {qtr}
+stop_at: {stop_at}
+item: {item}
 '''.format(**locals()))
 
 good_count = 0
+with_item_count = 0
 bad_count = 0
+char_count = 0
+
 start = datetime.datetime.now()
 with (directory / 'good.txt').open('w') as good, \
      (directory / 'bad.txt').open('w') as bad, \
      (directory / 'errors.txt').open('w') as error:
     files = [good, bad, error, sys.stdout]
+
     for i, index_info in enumerate(get_index(year, qtr, form_type=form_type)):
-        if i >= stop_at:
+        if stop_at is not None and i >= stop_at:
             break
         else:
             path = index_info['Filename']
             name = index_info['Company Name']
 
             try:
-                get_document(path, **kwargs)
+                items = get_document(path, **kwargs)
             except Exception as e:
                 bad_count += 1
                 print(i, name, 'bad')
-                error.write(name + '\n')
+                print(name, file=error)
                 traceback.print_exc(file=error)
-                bad.write(name + '\n')
-                [file.flush() for file in files]
+                print(name, file=bad)
             else:
                 good_count += 1
                 print(i, name, 'good')
-                good.write(name + '\n')
-                [file.flush() for file in files]
+                print(name, file=good)
+                if item in items:
+                    with_item_count += 1
+                    char_count += len(items[item])
+        # flushing the files writes the temporary output to each file
+        [file.flush() for file in files]
 stop = datetime.datetime.now()
 
-with (directory / 'info.txt').open('a') as info:
-    total_count = good_count + bad_count
-    avg = good_count / total_count * 100
-    elapsed = (stop - start).total_seconds()
-    res = '''
-avg: {avg:.01f}% ({good_count} / {total_count})
-time: {elapsed}
+# compute results
+total_count = good_count + bad_count
+hit_rate = good_count / total_count * 100
+time = (stop - start).total_seconds()
+avg_time = time / total_count
+size = char_count / 1024 / 1024
+item_hit_rate = with_item / total_count * 100
+avg_size = char_count / with_item_count / 1024
+
+# print results (to screen and to file)
+res = '''hit rate: {hit_rate:.0f}% ({good_count} / {total_count})
+time: {time:.2f}s (average of {avg_time:.2f}s)
+item hit rate: {item_hit_rate:.0f}% ({with_item_count} / {total_count})
+size of item: {size:.0f} mb (average of {avg_size:.0f} kb)
 '''.format(**locals())
+print(res)
+with (directory / 'info.txt').open('a') as info:
     info.write(res)
-    print(res)

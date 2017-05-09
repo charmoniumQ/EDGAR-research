@@ -6,19 +6,30 @@ from mining.retrieve_10k import get_10k_items
 from mining.retrieve_8k import get_8k_items
 from util.new_directory import new_directory
 
+'''
+This script downloads and parses forms.
+It writes each company into its own folder.
+It writes all of the intermediate steps as well.
+
+year: (int)
+qtr: (int) from 1-4
+form_type: (lowercase string) Currently only '10-k' and '8-k' are supported
+predicate: a function that consumes an index_info and returns a boolean
+'''
+
 year = 2016
 qtr = 3
-form_type = '10-k' # user lower-case
-
+form_type = '10-k'
 def predicate(index_info):
-    # index_info['Company Name']
-    # index_info['CIK']
-    # i
-    return index_info['Company Name'] == 'AMERICAN SOFTWARE INC'
+    # Uncomment one of the following lines
+    # return index_info['Company Name'] == 'AMERICAN SOFTWARE INC'
+    # return index_info['CIK']
+    return i < 10 # takes the first few files 
 
 base_dir = new_directory()
 print('Results in ' + base_dir.as_posix())
 
+# Write info file
 with (base_dir / 'info.txt').open('w+') as f:
     predicate_code = ''.join(inspect.getsourcelines(predicate)[0])
     f.write('''

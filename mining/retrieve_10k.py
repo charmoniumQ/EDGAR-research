@@ -4,7 +4,11 @@ import itertools
 import mining.cache as cache
 import mining.parsing as parsing
 
-def get_risk_factors(path, enable_cache, throw):
+def get_risk_factors(path, enable_cache, throw=False):
+    '''Returns the Item 1A section of the 8k form
+
+if throw is False, then errors will fail silently and an empty string will be returned
+'''
     try:
         items = get_10k_items(path, enable_cache)
         if '1a' in items:
@@ -15,7 +19,7 @@ def get_risk_factors(path, enable_cache, throw):
         if throw:
             raise e
         else:
-            return None
+            return {}
 
 item_headers = [
     'Item 1', 'Item 1A', 'Item 1B', 'Item 2', 'Item 3', 'Item 4', 'Item 5',

@@ -103,7 +103,8 @@ def clean_text(text):
 
     # turn bullet-point + whitespace into newline
     bullets = '([\u25cf\u00b7\u2022\x95])'
-    text = re.sub(bullets + r'\s+', '\n', text)
+    text = re.sub(r'\s+{bullets}\s+'.format(**locals()), ' ', text)
+    # TODO: add punctuation if punctuation is not at the end
 
     ### filter semantic spaces
 

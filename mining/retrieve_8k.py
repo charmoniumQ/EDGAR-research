@@ -3,7 +3,11 @@ import itertools
 import mining.cache as cache
 import mining.parsing as parsing
 
-def get_departure_of_directors_or_certain_officers(path, enable_cache):
+def get_departure_of_directors_or_certain_officers(path, enable_cache, throw=False):
+    '''Returns the Item 5.02 section of the 8k form
+
+if throw is False, then errors will fail silently and an empty string will be returned
+'''
     try:
         items = get_10k_items(path, enable_cache)
         if '5.02' in items:
@@ -14,7 +18,7 @@ def get_departure_of_directors_or_certain_officers(path, enable_cache):
         if throw:
             raise e
         else:
-            return None
+            return ''
 
 item_headers = ['Item 1.01', 'Item 1.02', 'Item 1.03', 'Item 1.04',
          'Item 2.01', 'Item 2.02', 'Item 2.03', 'Item 2.04', 'Item 2.05', 'Item 2.06',
@@ -53,6 +57,8 @@ Debug variables will be written to that path
     return items
 
 def extras_to_disk(extras, path):
+    '''Writes debug variables from to disk from get_10k_items'''
+
     if path.exists():
         for i in itertools.count(2):
             path2 = path.with_name(path.name + '_' + str(i))
