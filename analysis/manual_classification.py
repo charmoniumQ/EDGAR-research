@@ -48,12 +48,12 @@ try:
     
     # create the response file if it doesn't exist; if it does exist, load it into responseDictionary
     if os.path.isfile(responseFilePath):
-        with open(responseFilePath, "r", encoding='utf-8') as responseFile:
+        with open(responseFilePath, "r") as responseFile:
             responseReader = csv.DictReader(responseFile)
             for row in responseReader:
                 responseDictionary[row['number']] = row['response']
     else:
-        with(open(responseFilePath, "w+", encoding='utf-8')) as responseFile:
+        with(open(responseFilePath, "w+")) as responseFile:
             responseFile.write("number,response\n")
         responseFile.close()
     
@@ -61,7 +61,7 @@ try:
     quit = False
 
     # Go through the remaining paragraphs and record the user's response in the corresponding response file.
-    with open(paragraphFilePath, encoding='utf-8') as paragraphFile, open(responseFilePath, "a", newline="", encoding='utf-8') as responseFile:
+    with open(paragraphFilePath, encoding='utf-8') as paragraphFile, open(responseFilePath, "a", newline="") as responseFile:
         paragraphReader = csv.DictReader(paragraphFile)
         responseWriter = csv.writer(responseFile)
         for paragraph in paragraphReader:
