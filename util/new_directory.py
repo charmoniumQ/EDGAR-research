@@ -1,21 +1,25 @@
-import os
-import os.path
+import itertools
+from pathlib import Path
 
-RESULTS_PARENT_DIR = 'results'
+RESULTS = Path('results')
 
-def new_directory(make=True):
-    if not os.path.exists(RESULTS_PARENT_DIR):
-        os.mkdir(RESULTS_PARENT_DIR)
-    directory = os.path.join(RESULTS_PARENT_DIR, 'result_')
-    i = 99
-    i_s = '{:02d}'.format(i)
-    while os.path.isdir(directory + i_s) or os.path.isfile(directory + i_s):
-        i -= 1
-        i_s = '{:02d}'.format(i)
-    directory += i_s
-    if make:
-        os.mkdir(directory)
-    return directory + os.path.sep
+def new_directory():
+    if not RESULTS.exists():
+        RESULTS.mkdir()
+
+    # count down from 99
+    for i in range(99, -1, -1):
+        directory = RESULTS / 'result_{:02d}'.format(i)
+        if not directory.exists():
+            break
+    else:
+        # count up from 100 if 0-99 already taken
+        for i in itertools.count(100):
+            directory = RESULTS / 'result_{:02d}'.format(i)
+            if not directory.exists():
+                break
+    directory.mkdir()
+    return directory
 
 import urllib.request
 import random

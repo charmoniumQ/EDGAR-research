@@ -1,7 +1,7 @@
-from mining.cache import download
-from mining.retrieve_10k import SGML_to_files, extract_to_disk, html_to_text, ParseError
 import re
-
+import itertools
+import mining.cache as cache
+import mining.parsing as parsing
 
 def get_departure_of_directors_or_certain_officers(path, enable_cache, verbose, debug, throw=True, wpath=''):
     try:
@@ -16,130 +16,57 @@ def get_departure_of_directors_or_certain_officers(path, enable_cache, verbose, 
         else:
             return
 
-
-def get_items(path, enable_cache, verbose, debug, wpath=''):
-    sgml = download(path, enable_cache, verbose, debug)
-    if verbose: print('retrieve_8k.py: started parsing SGML')
-    files = SGML_to_files(sgml, verbose, debug)
-    if verbose: print('retrieve_8k.py: started parsing HTML')
-    items = parse_8k(files, enable_cache, verbose, debug, path)
-    if verbose: print('retrieve_8k.py: finished parsing')
-    return items
-
-
-def get_8k(path, enable_cache, verbose, debug):
-    sgml = download(path, enable_cache, verbose, debug)
-    files = SGML_to_files(sgml, verbose, debug)
-    item = parse_8k(path, enable_cache, verbose, debug, path)
-    return item
-
-
-def parse_8k(files, enable_cache, verbose, debug, path = ''):
-    # files is a list of dictionary which has 'type' and 'text' as items in the dictionary
-    for file in files:
-        if file['type'].lower() == "8-k":
-            break
-        
-    html = file['text']
-    text = html_to_text(html, verbose, debug, path)
-    text = clean_text(text, verbose, False, '')
-
-    items_8k = text_to_items(text, verbose, debug, path)
-
-    return items_8k
-
-
-def extract_8k(directory, path,enable_cache,verbose,debug):
-    sgml = download(path,enable_cache,verbose,debug)
-    files = SGML_to_files(sgml, verbose, debug)
-    extract_to_disk(directory, files, verbose, debug)
-
-def clean_text(text, verbose, debug, path=''):
-    if verbose: print('starting size', len(text))
-
-    # replace multiple spaces with a single one
-    # multiple spaces is not semantically significant and it complicates regex later
-    text = re.sub('\t', ' ', text)
-
-    # turn bullet-point + whitespace + text to bulletpoint + space + text
-    bullets = '([\u25cf\u00b7\u2022])'
-    text = re.sub(bullets + r'\s+', '\n ', text)
-
-    # ya know...
-    text = re.sub('\r', '\n', text)
-
-    # strip leading and trailing spaces (now that mulitiple spaces arec collapsed and \r -> \n)
-    # these are note semantically significant and it complicates regex later on
-    text = re.sub('\n ', '\n', text)
-    text = re.sub(' \n', '\n', text)
-
-    # remvoe single newlines (now that lines are stripped)
-    # only double newlines are semantically significant
-    text = re.sub('([^\n])\n([^\n])', '\\1\\2', text)
-
-    # double newline -> newline (now that single newlines are removed)
-    text = re.sub('\n+', '\n', text)
-
-
-    text = re.sub('  +', ' ', text)
-
-    # text is header, optional table of contents, anf body
-    # table of contents starts with "Part I"
-    # body starts with "Part I"
-
-    # trim header
-    # note that the [\. \n] is necessary otherwise the regex will match "part ii"
-    # note that the begining of line anchor is necessary because
-
-    if verbose: print('cleaned size', len(text))
-    return text
-
-items = ['Item 1.01', 'Item 1.02', 'Item 1.03', 'Item 1.04',
+item_headers = ['Item 1.01', 'Item 1.02', 'Item 1.03', 'Item 1.04',
          'Item 2.01', 'Item 2.02', 'Item 2.03', 'Item 2.04', 'Item 2.05', 'Item 2.06',
          'Item 3.01', 'Item 3.02', 'Item 3.03',
          'Item 4.01', 'Item 4.02',
          'Item 5.01', 'Item 5.02', 'Item 5.03', 'Item 5.04', 'Item 5.05', 'Item 5.06', 'Item 5.07', 'Item 5.08',
          'Item 6.01', 'Item 6.02', 'Item 6.03', 'Item 6.04', 'Item 6.05', 'Item 6.06',
-         'Item 7.01', 'Item 8.01', 'Item 9.01']
+         'Item 7.01', 'Item 8.01', 'Item 9.01',
+         (re.compile('^signatures?', flags=re.IGNORECASE | re.MULTILINE), 'sig')
+]
 
-def text_to_items(text, verbose, debug, path=''):
-    contents = {}
-    i = 0
 
-    while i < len(items):
+def get_8k_items(edgar_path, enable_cache, debug_path=None):
+    '''Returns a dict of items from the 10-K
 
-        # find the ith item if it exists
-        item = items[i]
-        item_match = re.search(r'^{item}.*?$'.format(**locals()), text, re.MULTILINE | re.IGNORECASE)
-        if item_match is None:
-            if debug:
-                print('no', item)
-                with open(path + item.lower() + '.txt', 'w', encoding='utf-8') as f:
-                    f.write(text)
-
-            # this item does not exist. skip
-            i += 1
-            continue
-        # trim text to start
-        text = text[item_match.end():]
-
-        # find the next item that exists in the document
-        for j in range(i + 1, len(items)):
-            next_item = items[j]
-            next_item_match = re.search(r'^{next_item}'.format(**locals()), text, re.MULTILINE | re.IGNORECASE)
-            if next_item_match is not None:
-                # next item is found
-                break
+The keys will be a lower-cased item header without the word 'item', such as
+'1a' or '5'.
+If path is not None, it should be the pathlib.Path of an extant directory.
+Debug variables will be written to that path
+'''
+    try:
+        sgml = cache.download(edgar_path, enable_cache)
+        fileinfos = parsing.SGML_to_fileinfos(sgml)
+        form_8k = parsing.find_form(fileinfos, '8-K')
+        if parsing.is_html(form_8k):
+            html = form_8k
+            clean_html = parsing.clean_html(html)
+            raw_text = parsing.html_to_text(clean_html)
         else:
-            # hit the end of the list without finding a next-item
-            contents[item.lower().replace("item ", "")] = text
-            break
+            raw_text = form_8k
+        clean_text = parsing.clean_text(raw_text)
+        items = parsing.text_to_items(clean_text, item_headers)
+    finally:
+        if debug_path is not None:
+            extras_to_disk(locals(), debug_path)
+    return items
 
-        # store match
-        contents[item.lower().replace("item ", "")] = text[:next_item_match.start()]
-        # trim text
-        text = text[next_item_match.start():]
-        # start at next_item
-        i = j
-    return contents
+def extras_to_disk(extras, path):
+    if path.exists():
+        for i in itertools.count(2):
+            path2 = path.with_name(path.name + '_' + str(i))
+            if not path2.exists():
+                path = path2
+                break
+    path.mkdir()
 
+    if 'items' in extras:
+        items_list = [key + '\n----\n' + val for key, val in extras['items'].items()]
+        extras['items_str'] = '\n----\n'.join(items_list)
+    parsing.dict_to_disk(extras, path)
+
+    if 'fileinfos' in extras:
+        raw_dir = path / 'raw_form'
+        raw_dir.mkdir()
+        parsing.fileinfos_to_disk(extras['fileinfos'], raw_dir)
