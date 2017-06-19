@@ -15,9 +15,9 @@ if throw is False, then errors will fail silently and an empty string will be re
             return items['1a']
         else:
             raise parsing.ParseError('Item 1A not found')
-    except Exception as e:
+    except Exception as exc:
         if throw:
-            raise e
+            raise exc
         else:
             return {}
 
@@ -63,13 +63,13 @@ def remove_header(text):
     # note that the [\. \n] is necessary otherwise the regex will match "part ii"
     # note that the begining of line anchor is necessary because we don't want
     # it to match "part i" in the middle of a paragraph
-    parti = re.search('^part i[\. \n]', text, re.MULTILINE | re.IGNORECASE)
+    parti = re.search('^part i[\\. \n]', text, re.MULTILINE | re.IGNORECASE)
     if parti is None:
         raise parsing.ParseError('Could not find "Part I" to remove header')
     text = text[parti.end():]
 
     ### remove table of contents, if it exists
-    parti = re.search('^part i[\. \n]', text, re.MULTILINE | re.IGNORECASE)
+    parti = re.search('^part i[\\. \n]', text, re.MULTILINE | re.IGNORECASE)
     if parti:
         text = text[parti.end():]
     else:
