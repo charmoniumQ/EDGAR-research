@@ -4,7 +4,7 @@ import inspect
 from mining.retrieve_index import get_index
 from mining.retrieve_10k import get_10k_items
 from mining.retrieve_8k import get_8k_items
-from mining.paragraphs import to_paragraphs, group_paragraphs, p_paragraphs, p_groups
+from util.paragraphs import to_paragraphs, group_paragraphs, p_paragraphs, p_groups
 from util.new_directory import new_directory
 
 '''
