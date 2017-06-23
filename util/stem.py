@@ -34,6 +34,11 @@ def lancaster_stemmer(words):
     stemmer = lancaster.LancasterStemmer()
     return map(stemmer.stem, words)
 
+def stem_list(text):
+    stemmer = porter.PorterStemmer()
+    words = nltk.word_tokenize(text)
+    return map(stemmer.stem, words)
+
 def stem(text):
     stemmer = porter.PorterStemmer()
     words = nltk.word_tokenize(text)

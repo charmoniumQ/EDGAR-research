@@ -1,4 +1,5 @@
 from __future__ import print_function
+import random
 from six.moves.html_parser import HTMLParser
 from bs4 import BeautifulSoup
 import re
@@ -82,6 +83,10 @@ def html_to_text(html):
 
 def clean_text(text):
     '''Cleans plaintext for semantically insignificant items'''
+
+    if '<PAGE>' in text or '<C>' in text:
+        text = re.sub('\\<PAGE\\>\s*', '\n', text)
+        text = re.sub('\\<C\\>\s*', '\n', text)
 
     ### character replacements
 
@@ -189,6 +194,8 @@ def fileinfos_to_disk(fileinfos, path):
         # if file['type'] == '10-K':
         #     print('Main 10k file: ' + file['filename'])
 
+        if 'filename' not in file:
+            file['filename'] = str(random.randint(0, 10000))
         with (path / file['filename']).open('wb') as f:
             f.write(file['text'])
 

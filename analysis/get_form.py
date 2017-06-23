@@ -19,7 +19,7 @@ predicate: a function that consumes an index_info and returns a boolean
 item: (lowercase string) If present, it prints the paragraphs in this item
 '''
 
-year = 2016
+year = 1997
 qtr = 3
 form_type = '10-k'
 item = '1a'

@@ -1,43 +1,59 @@
-import operator
-import datetime
-from cluster_config import init_spark, timer
+from cluster_config.download import Status, get_items
 
-sc = init_spark.get_sc('stats')
-year = 2016
-qtr = 1
-docs = 1000
-input = 'gs://output-bitter-voice/10k_data-{year}-qtr{qtr}-{docs}'.format(**locals())
-
-names = '1 1A 1B 2 3 4 5 6 7 7A 8 9 9A 9B 10 11 12 13 14 15 S'.split(' ')
-
-def count(filing):
-    if filing['error']:
-        return dict(total=1, valid=0, size=0, time=filing['download_time'])
+def count(record):
+    output = dict(time=record['time']['total'],
+                  download_time=record['time']['download'])
+    if record['error'] == Status.ERROR:
+        return output.update(dict(total=1, valid=0, item=0, size=0))
+    elif record['error'] == Status.NOT_FOUND:
+        return output.update(dict(total=1, valid=1, item=0, size=0))
     else:
-        total_size = 0
-        for name in names:
-            if name in filing:
-                total_size += len(filing[name])
-        return dict(total=1, valid=1, size=total_size, time=filing['download_time'])
+        return output.update(dict(total=1, valid=1, item=1,
+                                  size=len(record['item'])))
 
-with timer.timer(print_=True):
-    risk_data = sc.pickleFile(input)
-    risk_data = risk_data.map(count).collect()
 
-    result = dict(total=0, valid=0, size=0, time=0)
-    for filing in risk_data:
-        for key in 'total valid size time'.split(' '):
-            result[key] += filing[key]
+def dict_add(d1, d2):
+    '''Adds two dicts on their common keys'''
+    return {key: d1[key] + d2[key] for key in d1.keys() & d2.keys()}
 
-avg_size = (result['size'] / result['valid']) / 1e3
-size = result['size'] / 1e6
-hit_ratio = (result['valid'] / result['total']) * 1e2
-throughput = result['size'] / result['time'] / 1e3
 
-print('''
-{result[time]:.1f}s in total
-{throughput:f} kbytes / sec
-{size:.1f} MB in total
-{avg_size:.0f} KB per doc
-{hit_ratio:.0f}% = {result[valid]} / {result[total]}
-'''.format(**locals()))
+def interpret_count(count):
+    total_time = count['time'].total_seconds()
+    download_time = count['download'].total_seconds()
+    data_throughput = count['size'] / count['time'] / 1e3
+    doc_throughput = count['total'] / count['time']
+
+    avg_size = (count['size'] / count['item']) / 1e3
+    size = count['size'] / 1e6
+
+    item_ratio = (count['item'] / count['valid']) * 1e2
+    valid_ratio = (count['valid'] / count['total']) * 1e2
+    return '''
+{total_time:.1f} sec of time ({download_time:.1f} sec in download/parse)
+{data_throughput:f} kbytes / sec
+{doc_throughput:f} docs / sec
+
+{size:.1f} MB in size ({avg_size:.0f} KB / doc)
+
+{valid_ratio:.0f}% ({count[valid]} / {count[total]})
+{item_ratio:.0f}% ({count[item]} / {count[valid]})
+'''.format(**locals())
+
+
+def stats_for(year, qtr, item):
+    res = (
+        get_items(year, qtr, item)
+        .map(count)
+        .reduce(dict_add)
+        .collect()
+    )
+    return interpret_count(res)
+
+def stats_fors(years, item):
+    for year in years:
+        for qtr in range(1, 5):
+            yield stats_for(year, qtr, item)
+
+if __name__ == '__main__':
+    years = range(2007, 2017)
+    map(print, stats_fors(years, '1a'))

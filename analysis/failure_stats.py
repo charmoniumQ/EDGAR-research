@@ -24,9 +24,9 @@ item: (must be '1a' or '5.02' or something similar) the item to select from each
   form. This script will measure the size of that item.
 '''
 form_type = '10-k'
-year = 2016
-qtr = 3
-stop_at = None
+year = 2005
+qtr = 1
+stop_at = 5
 item = '1a'
 
 # select function for getting form
@@ -80,11 +80,14 @@ with (directory / 'good.txt').open('w') as good, \
                 print(name, file=bad)
             else:
                 good_count += 1
-                print(i, name, 'good')
+                print(i, name, 'good', end='')
                 print(name, file=good)
                 if item in items:
                     with_item_count += 1
                     char_count += len(items[item])
+                    print()
+                else:
+                    print(' '.join(sorted(items.keys())))
         # flushing the files writes the temporary output to each file
         [file.flush() for file in files]
 stop = datetime.datetime.now()
@@ -95,8 +98,11 @@ hit_rate = good_count / total_count * 100
 time = (stop - start).total_seconds()
 avg_time = time / total_count
 size = char_count / 1024 / 1024
-item_hit_rate = with_item / total_count * 100
-avg_size = char_count / with_item_count / 1024
+item_hit_rate = with_item_count / total_count * 100
+if with_item_count != 0:
+    avg_size = char_count / with_item_count / 1024
+else:
+    avg_size = 0
 
 # print results (to screen and to file)
 res = '''hit rate: {hit_rate:.0f}% ({good_count} / {total_count})

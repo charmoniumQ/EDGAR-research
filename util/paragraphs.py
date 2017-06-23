@@ -1,3 +1,4 @@
+from util.supress import supress
 from nltk.tokenize.punkt import PunktSentenceTokenizer
 import re
 
@@ -20,13 +21,15 @@ def anounce(it, msg=None):
 def to_paragraphs(text):
     '''Returns a list of paragraphs where each paragraph is a list of sentences.'''
     # http://www.nltk.org/api/nltk.tokenize.html#module-nltk.tokenize.punkt
-    punkt = PunktSentenceTokenizer()
-    punkt.train(text, verbose=False)
+    with supress():
+        punkt = PunktSentenceTokenizer()
+        punkt.train(text, verbose=False)
 
-    lines = text.split('\n')
-    text_lines = filter(is_text_line, lines)
-    paragraphs = map(punkt.tokenize, text_lines)
-    return list(paragraphs)
+        lines = text.split('\n')
+        text_lines = filter(is_text_line, lines)
+        paragraphs = map(punkt.tokenize, text_lines)
+        return list(paragraphs)
+        #return paragraphs
 
 def p_paragraphs(paragraphs, f):
     for paragraph in paragraphs:
