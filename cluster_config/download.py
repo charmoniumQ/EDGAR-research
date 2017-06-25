@@ -4,7 +4,7 @@ from enum import Enum
 from mining.retrieve_index import get_index
 from mining.retrieve_10k import get_10k_items
 from mining.parsing import ParseError
-from util.timer import insert_time, add_time
+from util.timer import add_time
 from cluster_config.init_spark import init_spark
 from cluster_config.init_spark import spark_cache
 
@@ -16,10 +16,24 @@ class Status(Enum):
 
 
 @add_time
-def downlaod(record):
-    output = record.copy()
+def download(index):
+    '''
+Outputs:
+{
+    'index': {
+        see mining.retreive_index for how this works
+    },
+    'status': elem of Status enum,
+    'form': {
+        {
+            'item label': 'string item ontents
+        }
+    }
+}
+'''
+    output = dict(index=index.copy())
     try:
-        form = get_10k_items(record['Filename'], enable_cache=False)
+        form = get_10k_items(index['Filename'], enable_cache=False)
     except ParseError as e:
         output['status'] = Status.ERROR
         output['desc'] = str(e)
@@ -37,11 +51,11 @@ def filter_items(item):
             return record
         else:
             if item not in output['form']:
-                output['error'] = Status.NOT_FOUND
+                output['status'] = Status.NOT_FOUND
                 output['keys'] = output['form'].keys()
                 del output['form']
             else:
-                output['error'] = Status.SUCCESS
+                output['status'] = Status.SUCCESS
                 output['item'] = output['form'][item]
                 del output['form']
     return filter_items_
@@ -56,6 +70,11 @@ def get_items(year, qtr, item):
     )
 
 
+def filter_status(status):
+    def filter_status_(record):
+        return record['status'] == status
+
+
 def get_index_range(year_range, item):
     rdds = []
     for year in year_range:
@@ -66,20 +85,3 @@ def get_index_range(year_range, item):
 
 if __name__ == '__main__':
     global sc; sc = init_spark.get_sc('download')
-    year_range = range(2007, 2017)
-    counts = (
-        get_index_range(year_range, '1a')
-        .map(count)
-        .reduce(dict_add)
-    )
-
-
-# year = 2016
-# qtr = 1
-# docs = 1000
-# folds = 80
-# output = 'gs://output-bitter-voice/10k_data-{year}-qtr{qtr}-{docs}'.format(**locals())
-# with timer.timer(print_=True):
-#     index = get_index(year, qtr,enable_cache=False, verbose=False, debug=False)
-#     risk_data = sc.parallelize(itertools.islice(index, docs), folds).map(download_risk)
-#     risk_data.saveAsPickleFile(output)

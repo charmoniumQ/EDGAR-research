@@ -36,11 +36,11 @@ def spark_cache(sc, filename, bucketname, hit_msg=None, miss_msg=None):
             key = hashable((args, kwargs))
 
             if key in cache:
-                if hit_msg: print(hit_msg.format(**locals()))
+                if hit_msg: print(hit_msg.format(**locals())) # noqa
                 url = cache[key]
                 rdd = sc.pickleFile(url)
             else:
-                if miss_msg: print(miss_msg.format(**locals()))
+                if miss_msg: print(miss_msg.format(**locals())) # noqa
                 rdd = func(*args, **kwargs)
                 url = bucketname + Haikunator.haikunate(0, '_')
                 rdd.saveAsPickleFile(url)

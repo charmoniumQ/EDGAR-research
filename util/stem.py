@@ -4,6 +4,7 @@ import nltk
 from nltk.stem import WordNetLemmatizer, porter, lancaster
 from nltk.corpus import wordnet
 
+
 def get_wordnet_pos(treebank_tag):
     if treebank_tag.startswith('J'):
         return wordnet.ADJ
@@ -16,6 +17,7 @@ def get_wordnet_pos(treebank_tag):
     else:
         return ''
 
+
 def lemmatize(words):
     wordnet_lemmatizer = WordNetLemmatizer()
     for word, part_of_speech_ in nltk.pos_tag(words):
@@ -26,23 +28,33 @@ def lemmatize(words):
             lemma = wordnet_lemmatizer.lemmatize(word, pos=part_of_speech)
             yield lemma
 
+
 def porter_stemmer(words):
     stemmer = porter.PorterStemmer()
     return map(stemmer.stem, words)
 
+
 def lancaster_stemmer(words):
     stemmer = lancaster.LancasterStemmer()
     return map(stemmer.stem, words)
+
 
 def stem_list(text):
     stemmer = porter.PorterStemmer()
     words = nltk.word_tokenize(text)
     return map(stemmer.stem, words)
 
+
 def stem(text):
     stemmer = porter.PorterStemmer()
     words = nltk.word_tokenize(text)
     return ' '.join(map(stemmer.stem, words))
+
+
+def regularize(text):
+    text = text.lower()
+    return re.sub('[^a-z ]', '', text)
+
 
 if __name__ == '__main__':
     words = 'financial finances financially - finishing - fin - fine - refusal refuse refusing - referral - referring - referential reference'.split(' ')

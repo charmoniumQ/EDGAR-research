@@ -1,5 +1,6 @@
 from cluster_config.download import Status, get_items
 
+
 def count(record):
     output = dict(time=record['time']['total'],
                   download_time=record['time']['download'])
@@ -49,10 +50,12 @@ def stats_for(year, qtr, item):
     )
     return interpret_count(res)
 
+
 def stats_fors(years, item):
     for year in years:
         for qtr in range(1, 5):
             yield stats_for(year, qtr, item)
+
 
 if __name__ == '__main__':
     years = range(2007, 2017)
