@@ -81,6 +81,17 @@ def html_to_text(html):
     text = text.replace('my-escape-newlines', '\n\n')
     return text
 
+def is_toc(alpha_line):
+    return ('tableofcontents' in alpha_line
+            # and not much else is on the line (the word 'page' could be on the line)
+            and len(alpha_line) <= len('tableofcontents') + 4)
+
+def is_text_line(line):
+    # remove non-alphabetic characters
+    alpha_line = re.sub('[^a-zA-Z]', '', line).lower()
+    # TODO: examine bullet-points in 1-800-FLOWERS
+    return len(alpha_line) > 3 and not(is_toc(alpha_line))
+
 def clean_text(text):
     '''Cleans plaintext for semantically insignificant items'''
 
@@ -133,6 +144,8 @@ def clean_text(text):
 
     # double newline -> newline (now that single newlines are removed)
     text = re.sub('\n+', '\n', text)
+
+    text = '\n'.join(filter(is_text_line, text.split('\n')))
 
     return text
 

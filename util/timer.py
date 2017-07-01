@@ -1,17 +1,19 @@
 import datetime
 import contextlib
 
+
 @contextlib.contextmanager
-def timer(print_=False):
+def timer(msg=None):
     dct = {}
     start = datetime.datetime.now()
     try:
         yield dct
     finally:
         stop = datetime.datetime.now()
-        dct['time'] = stop - start
-        if print_:
-            print('Took {time!s}'.format(**locals()))
+        time = stop - start
+        dct['time'] = time
+        if msg:
+            print('{time!s}: {msg}'.format(**locals()))
 
 
 def add_time(func):

@@ -1,4 +1,3 @@
-from tabulate import tabulate
 import re
 import nltk
 from nltk.stem import WordNetLemmatizer, porter, lancaster
@@ -57,6 +56,7 @@ def regularize(text):
 
 
 if __name__ == '__main__':
+    from tabulate import tabulate
     words = 'financial finances financially - finishing - fin - fine - refusal refuse refusing - referral - referring - referential reference'.split(' ')
     table = [words]
     # table.append(list(lemmatize(words)))

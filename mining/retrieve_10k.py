@@ -4,10 +4,12 @@ import itertools
 import mining.cache as cache
 import mining.parsing as parsing
 
+
 def get_risk_factors(path, enable_cache, throw=False):
     '''Returns the Item 1A section of the 8k form
 
-if throw is False, then errors will fail silently and an empty string will be returned
+if throw is False, then errors will fail silently and an empty string will be
+returned
 '''
     try:
         items = get_10k_items(path, enable_cache)
@@ -21,11 +23,13 @@ if throw is False, then errors will fail silently and an empty string will be re
         else:
             return {}
 
+
 item_headers = [
     'Item 1', 'Item 1A', 'Item 1B', 'Item 2', 'Item 3', 'Item 4', 'Item 5',
     'Item 6', 'Item 7', 'Item 7A', 'Item 8', 'Item 9', 'Item 9A', 'Item 9B',
     'Item 10', 'Item 11', 'Item 12', 'Item 13', 'Item 14', 'Item 15',
     'Signatures']
+
 
 def get_10k_items(edgar_path, enable_cache, debug_path=None):
     '''Returns a dict of items from the 10-K
@@ -59,8 +63,9 @@ def remove_header(text):
     # table of contents starts with "Part I"
     # body starts with "Part I"
 
-    ### trim header
-    # note that the [\. \n] is necessary otherwise the regex will match "part ii"
+    # ====== trim header ====
+    # note that the [\\. \n] is necessary otherwise the regex will match
+    # "part ii"
     # note that the begining of line anchor is necessary because we don't want
     # it to match "part i" in the middle of a paragraph
     parti = re.search('^part i[\\. \n]', text, re.MULTILINE | re.IGNORECASE)
@@ -68,7 +73,7 @@ def remove_header(text):
         raise parsing.ParseError('Could not find "Part I" to remove header')
     text = text[parti.end():]
 
-    ### remove table of contents, if it exists
+    # ====== remove table of contents, if it exists ====
     parti = re.search('^part i[\\. \n]', text, re.MULTILINE | re.IGNORECASE)
     if parti:
         text = text[parti.end():]
@@ -76,6 +81,7 @@ def remove_header(text):
         # this means there was no table of contents
         pass
     return text
+
 
 def extras_to_disk(extras, path):
     '''Writes debug variables from to disk from get_10k_items'''
@@ -88,7 +94,8 @@ def extras_to_disk(extras, path):
     path.mkdir()
 
     if 'items' in extras:
-        items_list = [key + '\n----\n' + val for key, val in extras['items'].items()]
+        items_list = [key + '\n----\n' + val
+                      for key, val in extras['items'].items()]
         extras['items_str'] = '\n----\n'.join(items_list)
     parsing.dict_to_disk(extras, path)
 

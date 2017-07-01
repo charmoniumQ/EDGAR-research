@@ -13,7 +13,8 @@ def get_index(year, qtr, form_type="10-k", enable_cache=True, verbose=False):
     enable_cache: if True, the index will be stored on the disk
     verbose: if True, print when downloading
 
-yields a dict with keys "Company Name" (str), "CIK" (int), "Date Filed" (date), "Filename" (str)'''
+    yields a dict with keys "Company Name" (str), "CIK" (int),
+    "Date Filed" (date), "Filename" (str), "year" (int), "qtr" (int)'''
 
     if not (1 <= qtr <= 4):
         raise ValueError('Quarter must be between 1 and 4')
@@ -23,7 +24,9 @@ yields a dict with keys "Company Name" (str), "CIK" (int), "Date Filed" (date), 
     for index_record in parse_index(index_file):
         if index_record['Form Type'] == form_type:
             found_section = True
-            del index_record['Form Type']
+            # del index_record['Form Type']
+            index_record['year'] = year
+            index_record['qtr'] = qtr
             yield index_record
         else:
             if found_section:
