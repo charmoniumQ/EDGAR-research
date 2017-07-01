@@ -38,7 +38,7 @@ def frequency_pairs(year, qtr, item):
         .mapValues(regularize)                  # [(key, clause)]
         .flatMapValues(stem_list)               # [(key, word)]
         .groupByKey()                           # [(key, [word])]
-        .mapValues(collections.Counter)
+        .mapValues(collections.Counter)         # [(year, CIK), Counter]
     )
 
 

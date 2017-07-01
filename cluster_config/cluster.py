@@ -39,6 +39,7 @@ def select_features(words, matrix, dims=600, stop_words=0.8, clusters=20, keywor
         exp_var = lsa.explained_variance_ratio_.sum() * 100
         print("Explained variance of the SVD step: {exp_var:1f}% ({old_shape} -> {new_shape})".format(**locals()))
 
+	# TODO: crossval cluster number
     with timer('kmeans'):
         k_means.fit(matrix)
 
