@@ -1,3 +1,4 @@
+import pickle
 import heapq
 import numpy as np
 from sklearn.feature_extraction.text import TfidfTransformer
@@ -5,29 +6,40 @@ from sklearn.decomposition import TruncatedSVD
 from sklearn.cluster import KMeans
 from sklearn.feature_selection import VarianceThreshold
 from util.timer import timer
+from util.new_directory import new_directory
+from util.project import project
+
+class FeatureSelector(object):
+    def __init__(self, selector=None):
+        pass
+
+
+    def fit_transform(self, matrix):
+        pass
+        # matrix_ = tfidf.fit_transform(matrix).toarray()
+
+        # to_remove = int(matrix_.shape[1] * stop_words)
+        # std = VarianceThreshold().fit(matrix_).variances_
+        # std.sort()
+        # threshold = std[to_remove]
+        # print('Removing', to_remove, 'stop words of', std.shape[0], '; Thresholding at', threshold)
+        # selector.threshold = threshold
+        # old_shape = matrix.shape
+        # matrix = selector.fit_transform(matrix)
+        # new_shape = matrix.shape
+        # print('{old_shape} -> {new_shape}'.format(**locals()))
 
 
 def select_features(words, matrix, dims=600, stop_words=0.8, clusters=20, keywords=30):
     tfidf = TfidfTransformer(norm='l2')
     lsa = TruncatedSVD(dims, n_iter=3)
-    selector = VarianceThreshold()
+    selector = FeatureSelector()
     k_means = KMeans(n_clusters=clusters, init='k-means++', max_iter=100,
                      n_init=10)
 
-    with timer('pre idf'):
-        matrix = tfidf.fit_transform(matrix).toarray()
-
-    with timer('select'):
-        to_remove = int(matrix.shape[1] * stop_words)
-        std = VarianceThreshold().fit(matrix).variances_
-        std.sort()
-        threshold = std[to_remove]
-        print('Removing', to_remove, 'stop words of', std.shape[0], '; Thresholding at', threshold)
-        selector.threshold = threshold
-        old_shape = matrix.shape
-        matrix = selector.fit_transform(matrix)
-        new_shape = matrix.shape
-        print('{old_shape} -> {new_shape}'.format(**locals()))
+    count = matrix.sum(axis=0)
+    # with timer('pre idf'):
+    #     matrix = selector.fit_transform(matrix)
 
     with timer('idf'):
         matrix = tfidf.fit_transform(matrix)
@@ -44,10 +56,16 @@ def select_features(words, matrix, dims=600, stop_words=0.8, clusters=20, keywor
 
     for cluster_center in k_means.cluster_centers_:
         cluster_center = cluster_center[np.newaxis, :]
-        word_vec = selector.inverse_transform(lsa.inverse_transform(cluster_center))
+        word_vec = lsa.inverse_transform(cluster_center)
         for (v, keyword) in heapq.nlargest(keywords, zip(list(word_vec[0]), words)):
             print(keyword, end=' ')
         print()
+
+    dir_ = new_directory()
+    print(dir_)
+    save = 'orig_matrix tfidf lsa k_means'.split(' ')
+    with (dir_ / 'vars.pickle').open('wb') as f:
+        pickle.dump(project(locals(), save), f)
 
 def graph():
     import matplotlib

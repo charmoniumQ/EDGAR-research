@@ -2,6 +2,7 @@ import re
 import nltk
 from nltk.stem import WordNetLemmatizer, porter, lancaster
 from nltk.corpus import wordnet
+non_lowrcase_letter = re.compile('[^a-z]')
 
 
 def get_wordnet_pos(treebank_tag):
@@ -23,7 +24,7 @@ def lemmatize(words):
         part_of_speech = get_wordnet_pos(part_of_speech_)
         if part_of_speech:
             word = word.lower()
-            word = re.sub('[^a-z]', '', word)
+            word = re.sub(non_lowrcase_letter, '', word)
             lemma = wordnet_lemmatizer.lemmatize(word, pos=part_of_speech)
             yield lemma
 
@@ -52,7 +53,7 @@ def stem(text):
 
 def regularize(text):
     text = text.lower()
-    return re.sub('[^a-z ]', '', text)
+    return re.sub(non_lowrcase_letter, '', text)
 
 
 if __name__ == '__main__':

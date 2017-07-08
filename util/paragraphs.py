@@ -44,11 +44,15 @@ def to_sentences(text):
     return flatten(paragraphs)
 
 
+def is_text_phrase(phrase):
+    return len(re.sub(non_letter, '', phrase)) >= 1
+
+
+boundary = [';', ',', '- ', ':']
+boundary_re = re.compile('|'.join(boundary))
+
+
 def to_clauses(sentence):
-    def is_text_phrase(phrase):
-        return len(re.sub(non_letter, '', phrase)) >= 1
-    boundary = [';', ',', '- ', ':']
-    boundary_re = re.compile('|'.join(boundary))
     return list(filter(is_text_phrase, boundary_re.split(sentence)))
 
 
