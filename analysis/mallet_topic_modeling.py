@@ -11,8 +11,8 @@ This script automatically runs MALLET's topic modeling algorithm on data provide
 '''
 
 MALLET_PATH = '/home/shayan/Programs/mallet-2.0.8'
-INPUT = '/home/shayan/Documents/UTD/EDGAR/EDGAR-research/results/result_99'
-NUMBER_OF_TOPICS = 80
+INPUT = '/home/shayan/Documents/UTD/EDGAR/EDGAR-research/results/result_98'
+NUMBER_OF_TOPICS = 20
 OUTPUT_PATH = os.getcwd()/new_directory()
 
 print('Output path = ' + OUTPUT_PATH.as_posix())

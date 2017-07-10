@@ -12,8 +12,8 @@ year: (int)
 qtr: (int) 1-4
 '''
 
-year = 2016
-qtr = 3
+year = 2006
+qtr = 1
 
 directory = new_directory()
 print('Results in ' + directory.as_posix())
