@@ -1,8 +1,7 @@
 from __future__ import print_function
 import re
 import itertools
-import mining.cache as cache
-import mining.parsing as parsing
+import code.parsing as parsing
 
 
 def get_risk_factors(path, enable_cache, throw=False):
