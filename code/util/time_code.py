@@ -3,7 +3,7 @@ import contextlib
 
 
 @contextlib.contextmanager
-def timer(msg=None):
+def time_code(msg=None):
     dct = {}
     start = datetime.datetime.now()
     try:
@@ -18,7 +18,7 @@ def timer(msg=None):
 
 def add_time(func):
     def wrapped_func(*args, **kwargs):
-        with timer() as dct:
+        with time_code() as dct:
             result = func(*args, **kwargs)
         if 'time' not in result:
             result['time'] = dict(total=datetime.timedelta(0))

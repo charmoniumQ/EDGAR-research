@@ -84,3 +84,34 @@ for index_info in filter(predicate, index):
                 p_groups(groups, f)
         else:
             print('{item} not in {}'.format(doc.keys(), **globals()))
+
+
+# def filter_CIK(CIKs):
+#     def filter(record, form, item):
+#         return record['CIK'] in CIKs
+#     return filter
+
+
+# def filter_name(names):
+#     names = set(map(lambda x: x.upper(), names))
+
+#     def filter(record, form, item):
+#         return record['company_name'] in names
+#     return filter
+
+
+# def content_contains(term):
+#     def filter(record, form, item):
+#         return term.lower() in item.lower()
+#     return filter
+
+
+# def content_matches(regex):
+#     def filter(record, form, item):
+#         return re.search(regex, item)
+#     return filter
+
+
+# def min_size(size):
+#     def filter(record, form, item):
+#         return len(item) > size

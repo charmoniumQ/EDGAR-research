@@ -10,7 +10,7 @@ import operator
 
 
 Record = collections.namedtuple('Record', [
-    'form_type', 'company_name', 'CIK', 'date_filed', 'path', 'year', 'qtr'
+    'form_type', 'company_name', 'CIK', 'date_filed', 'url', 'year', 'qtr'
 ])
 
 
@@ -22,14 +22,14 @@ def index(year, qtr, form_type):
 
 
 def download(year, qtr):
-    index = 'form'
-    url = 'https://www.sec.gov/Archives/edgar/full-index/{year}/QTR{qtr}/form.zip'.format(**locals()) # noqa
+    index_type = 'form'
+    url = 'https://www.sec.gov/Archives/edgar/full-index/{year}/QTR{qtr}/{index_type}.zip'.format(**locals()) # noqa
     compressed_file = urllib.request.urlopen(url).read()
     compressed_file = io.BytesIO(compressed_file)
 
     # unzip the file
     with zipfile.ZipFile(compressed_file, 'r') as index_zip:
-        uncompressed_file = index_zip.open('{index}.idx'.format(**locals()))
+        uncompressed_file = index_zip.open('{index_type}.idx'.format(**locals()))
         return uncompressed_file
 
 
@@ -64,23 +64,21 @@ def parse_body(year, qtr, lines, col_names):
         out = {
             'year': year,
             'qtr': qtr,
-            'form_type': line_dict['Form Type'].lower(),
-            'company_name': line_dict['Company Name'].upper(),
+            'form_type': line_dict['Form Type'],
+            'company_name': line_dict['Company Name'],
             'CIK': int(line_dict['CIK']),
             'date_filed': datetime.datetime.strptime(
                 line_dict['Date Filed'], '%Y-%m-%d').date(),
-            'path': 'https://www.sec.gov/Archives/' + line_dict['Filename'],
+            'url': 'https://www.sec.gov/Archives/' + line_dict['Filename'],
         }
         yield Record(**out)
 
 
 def filter_form_type(records, this_form_type):
-    form_type_records = itertools.groupby(records, operator.attrgetter('form_type'))
-    for form_type, records in form_type_records:
+    form_types = itertools.groupby(records, operator.attrgetter('form_type'))
+    for form_type, records in form_types:
         if this_form_type == form_type:
             yield from records
-    else:
-        return []
 
 
 def split(line):
@@ -110,6 +108,3 @@ def split(line):
         elems.insert(1, '')
 
     return elems
-
-
-__all__ = ['index']
