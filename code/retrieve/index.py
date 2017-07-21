@@ -14,14 +14,14 @@ Record = collections.namedtuple('Record', [
 ])
 
 
-def index(year, qtr, form_type):
-    lines = download(year, qtr)
+def download(year, qtr, form_type):
+    lines = download_(year, qtr)
     col_names = parse_header(lines)
     records = parse_body(year, qtr, lines, col_names)
     return filter_form_type(records, form_type)
 
 
-def download(year, qtr):
+def download_(year, qtr):
     index_type = 'form'
     url = 'https://www.sec.gov/Archives/edgar/full-index/{year}/QTR{qtr}/{index_type}.zip'.format(**locals()) # noqa
     compressed_file = urllib.request.urlopen(url).read()
@@ -108,3 +108,6 @@ def split(line):
         elems.insert(1, '')
 
     return elems
+
+
+__all__ = ['download']

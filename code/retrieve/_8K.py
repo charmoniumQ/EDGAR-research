@@ -1,9 +1,9 @@
 import re
 import urllib
-from . import util
+from . import helpers
 
 
-def _8K(record, debug_path=None):
+def download(record, debug_path=None):
     '''Returns a dict of items from the 10-K
 
 The keys will be a lower-cased item header without the word 'item', such as
@@ -13,19 +13,19 @@ Debug variables will be written to that path
 '''
     try:
         sgml = urllib.request.urlopen(record.url).read()
-        fileinfos = util.SGML_to_fileinfos(sgml)
-        form_8k = util.find_form(fileinfos, '8-K')
-        if util.is_html(form_8k):
+        fileinfos = helpers.SGML_to_fileinfos(sgml)
+        form_8k = helpers.find_form(fileinfos, '8-K')
+        if helpers.is_html(form_8k):
             html = form_8k
-            clean_html = util.clean_html(html)
-            raw_text = util.html_to_text(clean_html)
+            clean_html = helpers.clean_html(html)
+            raw_text = helpers.html_to_text(clean_html)
         else:
             raw_text = form_8k
-        clean_text = util.clean_text(raw_text)
-        items = util.text_to_items(clean_text, item_headers)
+        clean_text = helpers.clean_text(raw_text)
+        items = helpers.text_to_items(clean_text, item_headers)
     finally:
         if debug_path is not None:
-            util.extras_to_disk(locals(), debug_path)
+            helpers.extras_to_disk(locals(), debug_path)
     return items
 
 
@@ -39,3 +39,6 @@ item_headers = [
     'Item 7.01', 'Item 8.01', 'Item 9.01',
     (re.compile('^signatures?', flags=re.IGNORECASE | re.MULTILINE), 'sig')
 ]
+
+
+__all__ = ['download']

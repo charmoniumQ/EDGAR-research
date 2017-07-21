@@ -1,10 +1,10 @@
 from __future__ import print_function
 import re
 import urllib
-from . import util
+from . import helpers
 
 
-def _10K(record, debug_path=None):
+def download(record, debug_path=None):
     '''Returns a dict of items from the 10-K
 
 The keys will be a lower-cased item header without the word 'item', such as
@@ -14,20 +14,20 @@ Debug variables will be written to that path
 '''
     try:
         sgml = urllib.request.urlopen(record.url).read()
-        fileinfos = util.SGML_to_fileinfos(sgml)
-        form_10k = util.find_form(fileinfos, '10-K')
-        if util.is_html(form_10k):
+        fileinfos = helpers.SGML_to_fileinfos(sgml)
+        form_10k = helpers.find_form(fileinfos, '10-K')
+        if helpers.is_html(form_10k):
             html = form_10k
-            clean_html = util.clean_html(html)
-            raw_text = util.html_to_text(clean_html)
+            clean_html = helpers.clean_html(html)
+            raw_text = helpers.html_to_text(clean_html)
         else:
             raw_text = form_10k
-        clean_text = util.clean_text(raw_text)
+        clean_text = helpers.clean_text(raw_text)
         main_text = remove_header(clean_text)
-        items = util.text_to_items(main_text, item_headers)
+        items = helpers.text_to_items(main_text, item_headers)
     finally:
         if debug_path is not None:
-            util.extras_to_disk(locals(), debug_path)
+            helpers.extras_to_disk(locals(), debug_path)
     return items
 
 
@@ -43,7 +43,7 @@ def remove_header(text):
     # it to match "part i" in the middle of a paragraph
     parti = re.search('^part i[\\. \n]', text, re.MULTILINE | re.IGNORECASE)
     if parti is None:
-        raise util.ParseError('Could not find "Part I" to remove header')
+        raise helpers.ParseError('Could not find "Part I" to remove header')
     text = text[parti.end():]
 
     # ====== remove table of contents, if it exists ====
@@ -61,3 +61,6 @@ item_headers = [
     'Item 6', 'Item 7', 'Item 7A', 'Item 8', 'Item 9', 'Item 9A', 'Item 9B',
     'Item 10', 'Item 11', 'Item 12', 'Item 13', 'Item 14', 'Item 15',
     'Signatures']
+
+
+__all__ = ['download']
