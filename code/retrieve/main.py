@@ -40,5 +40,5 @@ retrievers = {
 
 
 if __name__ == '__main__':
-    for record, rf in download_all(2014, 1, '10-K', 'Item 1A').take(10):
+    for record, rf in download_all(2014, 1, '10-K', 'Item 1A').take(2):
         print(rf[:100])
