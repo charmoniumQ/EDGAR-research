@@ -29,3 +29,9 @@ log.txt
 data/
 .project
 .pydevproject
+
+.idea/
+EDGAR-research.iml
+char_count.txt
+clean_html_text.txt
+stats.text
