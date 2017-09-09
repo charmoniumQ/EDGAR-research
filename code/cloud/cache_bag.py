@@ -1,4 +1,3 @@
-import collections
 import pickle
 import random
 import string

@@ -39,7 +39,7 @@ class Cache(object):
 
     def cached_function(self, *args, **kwargs):
         '''gets called where the funciton would be called'''
-        key = self.hashable((args, kwargs))
+        key = self.hashable_args(*args, **kwargs)
         if key in self.dct:
             res = self.dct[key]
             if self.hit_msg:
@@ -50,6 +50,10 @@ class Cache(object):
             if self.miss_msg:
                 print(self.miss_msg.replace('{key}', repr((args, kwargs))))
         return res
+
+    @classmethod
+    def hashable_args(Cls, *args, **kwargs):
+        return Cls.hashable((args, kwargs))
 
     @classmethod
     def hashable(Cls, obj):
@@ -73,6 +77,10 @@ class Cache(object):
     def clear(self):
         self.dct.clear()
 
+    def clear_item(self, *args, **kwargs):
+        key = self.hashable_args(*args, **kwargs)
+        del self.dct[key]
+
     def __repr__(self):
         dct_type = type(self.dct).__name__
         if hasattr(self, 'function'):
@@ -94,6 +102,14 @@ class FileBackedCache(DictBackedCache):
         super().__init__(*args, **kwargs)
         self.path = pathlib.Path(path)
 
+    def __setitem__(self, key, val):
+        super().__setitem__(key, val)
+        self.dump()
+
+    def __delitem__(self, key):
+        super().__delitem__(key)
+        self.dump()
+
     def load(self, name):
         self.filename = self.path / name
 
@@ -103,8 +119,7 @@ class FileBackedCache(DictBackedCache):
         else:
             self.data = {}
 
-    def __setitem__(self, *args, **kwargs):
-        super().__setitem__(*args, **kwargs)
+    def dump(self):
         if not self.filename.parent.exists():
             self.filename.parent.mkdir(parents=True)
             # TODO: new in Python3.5, exist_ok=True

@@ -1,9 +1,10 @@
-bokeh
+# bokeh
 nltk
 numpy
-scipy
+# scipy
 sklearn
 matplotlib
 dask
-cloudpickle
+# cloudpickle
 s3fs
+paramiko
