@@ -46,7 +46,7 @@ with (directory/"rf_report.csv").open('w+', encoding='utf-8') as rf_report:
     for year in range(y1, y2):
         for qtr in range(1, 5):
             print('YEAR', year, 'QTR', qtr)
-            for record in get_index(year, qtr, enable_cache=False):
+            for record in get_index(year, qtr, enable_cache=True):
             # for record in itertools.islice(get_index(year, qtr, enable_cache=True), None, 100):
                 name = record['Company Name']
                 # TODO: lint
