@@ -33,7 +33,9 @@ qtr: {qtr}
 '''
 Make database with Filing_Date, Year, Qtr, Company ID, hasRiskFactors
 '''
+header = 'date_filed,year,qtr,cik,name,has_valid_rf, number_of_rf'
 with (directory/"rf_report.csv").open('w+', encoding='utf-8') as rf_report:
+    rf_report.write(header + '\n')
     for year in range(2006, 2018):
         for qtr in range(1, 5):
             print('YEAR', year, 'QTR', qtr)
@@ -52,6 +54,6 @@ with (directory/"rf_report.csv").open('w+', encoding='utf-8') as rf_report:
                 line = ','.join([str(x) for x in [record['Date Filed'], year, qtr, record['CIK'], name,
                                                   valid_rf, len(paragraphs)]])
                 rf_report.write(line + '\n')
-                print(line)
+                # print(line)
 
             rf_report.flush()
