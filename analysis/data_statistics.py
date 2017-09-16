@@ -9,12 +9,13 @@ good = 0
 bad = 0
 total = 0
 
+year = 2013
+qtr = 1
 
-
-form_index = get_index(2016, 3)
+form_index = get_index(year, qtr)
 print("Press enter for another risk factor. Press 'q' to quit.")
 #list(islice(form_index, 6))
-with open("char_count.txt", 'w') as char_count_file, open("stats.text", 'w') as stats_file:
+with open('results/{year}_{qtr}_10k_char_count.txt'.format(**locals()), 'w') as char_count_file, open('results/{year}_{qtr}_10k_stats.text'.format(**locals()), 'w') as stats_file:
     for index_info in form_index:
         if good%10 == 0:
             print("SUB_TOTAL=", total)
