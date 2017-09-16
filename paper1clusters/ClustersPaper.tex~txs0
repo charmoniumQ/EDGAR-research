@@ -1,0 +1,809 @@
+% VERSION TRACKER
+% Contractual Complexity in a Long-Term Relationship
+% Bernhard Ganglmair and Michael Seeligson
+
+\RequirePackage{lineno} % line numbers
+\documentclass[12pt,english,draft]{article}
+\usepackage[latin1]{inputenc}
+\usepackage[english]{babel}
+\usepackage{amsmath, amsthm, amssymb, amsfonts}
+\usepackage{stackrel}
+\usepackage{mathrsfs}
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage{multirow,array}
+\usepackage{tikz}
+\usepackage{setspace}
+\usepackage{natbib}
+\usepackage{lineno}
+\usepackage{nicefrac}
+\usepackage{booktabs}
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{definition}{Definition}
+\newtheorem{corollary}{Corollary}
+\newtheorem{lemma}{Lemma}
+\newtheorem{conjecture}{Conjecture}
+
+% GRAPHICS PACKAGE
+\usepackage{tikz}
+\usepackage{pgfplotstable}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.10}
+\usepgfplotslibrary{fillbetween}
+\pgfplotsset{scaled y ticks=false}
+\pgfplotsset{scaled x ticks=false}
+\usetikzlibrary{arrows,decorations.pathreplacing,patterns}
+\usetikzlibrary{intersections,calc}
+
+% TO DO NOTES
+\usepackage[obeyDraft]{todonotes}
+ \newcounter{todocounter}
+ \newcommand{\todonum}[2][]
+ {\stepcounter{todocounter}\todo[#1]{\thetodocounter: #2}}
+\usepackage{MnSymbol} % needed for something else
+
+\newcommand{\mathsym}[1]{{}}
+\newcommand{\unicode}[1]{{}}
+\newcounter{mathematicapage}
+
+% NEW COMMAND
+\newcommand{\conc}{\shortparallel}
+\newcommand{\nconc}{\nshortparallel}
+
+\newcommand{\envx}{\overline{X}}
+\newcommand{\envy}{\overline{Y}}
+\newcommand{\agtx}{X}
+\newcommand{\agty}{Y}
+\newcommand{\actx}{x}
+\newcommand{\acty}{y}
+
+\newcommand{\paytwofix}{\pi^f_2}
+\newcommand{\paytwofixlearn}{\hat\pi^f_2}
+\newcommand{\paytwocont}{\pi^c_2}
+\newcommand{\al}{\xi}
+\newcommand{\alignone}{\al_1}
+\newcommand{\aligntwo}{\al_2}
+\newcommand{\alignX}{\al_{\envx}}
+\newcommand{\alignY}{\al_{\envy}}
+\newcommand{\alignE}{\al_{\env}}
+\newcommand{\alignXF}{\al_{\envx}\left(F\right)}
+\newcommand{\alignYF}{\al_{\envy}\left(F\right)}
+\newcommand{\alignXS}{\al_{\envx}\left(S\right)}
+\newcommand{\alignYS}{\al_{\envy}\left(S\right)}
+\newcommand{\alignES}{\al_{\env}\left(S\right)}
+\newcommand{\alignEF}{\al_{\env}\left(F\right)}
+\newcommand{\critone}{\al^*_1}
+\newcommand{\crittwo}{\al^*_2}
+\newcommand{\critX}{\al^*_{\envx}}
+\newcommand{\critY}{\al^*_{\envy}}
+\newcommand{\critXF}{\al^*_{\envx}\left(F\right)}
+\newcommand{\critYF}{\al^*_{\envy}\left(F\right)}
+\newcommand{\critXS}{\al^*_{\envx}\left(S\right)}
+\newcommand{\critYS}{\al^*_{\envy}\left(S\right)}
+\newcommand{\estX}{\hat{\theta}}
+\newcommand{\estalign}{\hat{\al}}
+\newcommand{\estalignone}{\hat{\al}_1}
+\newcommand{\estaligntwo}{\hat{\al}_2}
+\newcommand{\estalignX}{\hat{\al}_{\envx}}
+\newcommand{\estalignY}{\hat{\al}_{\envy}}
+\newcommand{\estalignXF}{\hat{\al}_{\envx}\left(F\right)}
+\newcommand{\estalignYF}{\hat{\al}_{\envy}\left(F\right)}
+\newcommand{\estalignXS}{\hat{\al}_{\envx}\left(S\right)}
+\newcommand{\estalignYS}{\hat{\al}_{\envy}\left(S\right)}
+\newcommand{\estalignEkO}{\hat{\al}_{\env}\left(k,O\right)}
+\newcommand{\estalignEkF}{\hat{\al}_{\env}\left(k,F\right)}
+\newcommand{\estalignEkS}{\hat{\al}_{\env}\left(k,S\right)}
+\newcommand{\estalignES}{\hat{\al}_{\env}\left(S\right)}
+\newcommand{\estalignEF}{\hat{\al}_{\env}\left(F\right)}
+\newcommand{\estaligntwoS}{\hat{\al}_2\left(S\right)}
+\newcommand{\estaligntwoF}{\hat{\al}_2\left(F\right)}
+\newcommand{\probsuccess}{\sigma}
+\newcommand{\disutility}{d}
+\newcommand{\probenvx}{\gamma}
+\newcommand{\probenvy}{\left(1-\probenvx \right) }
+\newcommand{\probenv}{\Gamma}
+\newcommand{\probagtx}{\theta}
+\newcommand{\probagty}{\left(1-\probagtx\right)}
+\newcommand{\probsucmatch}{p}
+\newcommand{\probsucnomatch}{q}
+\newcommand{\probsucX}{P_{S\envx}}
+\newcommand{\probsucY}{P_{S\envy}}
+\newcommand{\agtalign}{\al}
+\newcommand{\beliefagtx}{\hat{\probagtx}}
+\newcommand{\valsuc}{s}
+\newcommand{\type}{T}
+\newcommand{\env}{E}
+\newcommand{\act}{a}
+\newcommand{\str}{\alpha}
+\newcommand{\tstr}{\str_\type}
+\newcommand{\tstrx}{\tstr\left(k,\env\right)}
+\newcommand{\tstry}{\left(1-\tstrx\right)}
+\newcommand{\xstrx}{\str_\agtx \left(k,\env\right)}
+\newcommand{\xstry}{\left(1-\xstrx\right)}
+\newcommand{\ystrx}{\str_\agty \left(k,\env\right)}
+\newcommand{\ystry}{\left(1-\ystrx\right)}
+\newcommand{\Str}{A}
+\newcommand{\xStr}{\Str_\agtx}
+\newcommand{\yStr}{\Str_\agty}
+\newcommand{\tStr}{\Str_\type}
+\newcommand{\xStrO}{\Str_\agtx\left(O\right)}
+\newcommand{\xStrS}{\Str_\agtx\left(S\right)}
+\newcommand{\xStrF}{\Str_\agtx\left(F\right)}
+\newcommand{\yStrO}{\Str_\agty\left(O\right)}
+\newcommand{\yStrS}{\Str_\agty\left(S\right)}
+\newcommand{\yStrF}{\Str_\agty\left(F\right)}
+\newcommand{\tStrO}{\Str_\type\left(O\right)}
+\newcommand{\tStrS}{\Str_\type\left(S\right)}
+\newcommand{\tStrF}{\Str_\type\left(F\right)}
+
+\newcommand{\StrTO}[2]{\Str_{#1}^{#2}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% TITLE PAGE
+\title{Contractual Complexity in a Long-term Relationship %\thanks{%
+%We thank \ldots}
+}
+
+\author{
+Bernhard Ganglmair\thanks{%
+The University of Texas at Dallas, Naveen Jindal School of Management, 800
+W.~Campbell Rd.~(SM31), Richardson, TX 75080, USA; E: \href{mailto:ganglmair@utdallas.edu%
+}{ganglmair@utdallas.edu}; P:~+1-972-883-4736.} %
+%
+\and 
+%
+Michael Seeligson\thanks{%
+	The University of Texas at Dallas, Naveen Jindal School of Management, 800
+	W.~Campbell Rd.~(GC10), Richardson, TX 75080, USA; E: \href{mailto:michael.seeligson@utdallas.edu%
+	}{michael.seeligson@utdallas.edu}; P:~+1-972-883-4464.} %
+}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+%\setpagewiselinenumbers
+%\modulolinenumbers[1]
+%\linenumbers
+
+\maketitle
+
+\begin{abstract}
+We study the evolution of contract complexity in long-term relationships. In standard arguments, contracts in long-term relationships become more complex because principals learn about agents and environments and can write new terms that target the acquired knowledge. Conversely, contracts in long-term relationships become simpler because principals learn about agents and environments and eliminate irrelevant and costly provisions. We build a two-stage principal-agent model in which a principal offers an agent a contract at the beginning of each stage. Each contract can be of two forms: a simple, fixed-wage contract independent of the outcome of the agent's task, or a complex, outcome-contingent contract in which the agent's compensation is dependent on the success or failure of the task. The principal offers the first-stage contract under uncertainty of environment or agent's type. The environment is revealed after the first-stage contracting process, but the principal can only learn about the agent's type by offering a fixed-wage contract in the first period. The principal guarantees a higher probability of success in the first stage through an outcome contingent contract that incentivizes both types of agent to take the preferred action, but is consequently not able to infer the agent's type from the task outcome. Conversely, the principal chooses to incur the opportunity cost of not incentivizing the agent in stage one (and delegating decision authority to the agent) if the expected benefits of knowing the agent's type in stage two are sufficiently large. The agent may strategically choose actions to hide its type at stage one in order to induce a more beneficial contract in stage two. We characterize the perfect Bayesian equilibria of this two-stage game and provide the conditions under which this contracting relationship becomes more complex or less complex in the second stage. We compare the outcome of such sequential short-term contracting to the scenario in which the principal can change agents between stages, and to a second scenario in which the principal can offer a two-stage (long-term) contract at the beginning of stage one.  
+\end{abstract}
+
+
+
+\doublespacing
+\newpage
+
+% TABLE PACKAGES
+
+% GRAPHICS PACKAGE
+%\usepackage{tikz}
+%\usepackage{pgfplotstable}
+%\usepackage{pgfplots}
+%\pgfplotsset{compat=1.13}
+%\usepgfplotslibrary{fillbetween}
+%\pgfplotsset{scaled y ticks=false}
+%\pgfplotsset{scaled x ticks=false}
+%\usepackage{graphicx}
+
+%\usepackage[position=b]{subfig}
+%\usepackage{subfloat} %work with subfig and subfloat instead
+%\renewcommand{\thesubfigure}{\Alph{subfigure}}
+
+
+
+		
+		
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% BEGIN TABLE	
+\begin{table}
+		\caption{Notation for Parameters and Decisions}
+		\label{tab:notation}
+		\small
+		
+		\begin{center}
+			\begin{tabular*}{\textwidth}{l @{\extracolsep{\fill}} p{.8\textwidth}}
+				\toprule
+				\bf Variable & \bf Description \\
+				\midrule
+				\multicolumn{2}{l}{\itshape Model Parameters / Functions} \\
+				$O \in \left\{S, F \right\}$ & Project outcome in $t=1,2$ where success $O = S$ yields a value $s$ and failure $O=F$ yields a value of zero. \\
+				$\env \in \left\{\envx, \envy \right\}$ & Time-invariant environment. \\
+				$\type \in \left\{\agtx, \agty \right\}$ & Time-invariant agent type. \\ 
+				$\act \in \left\{\actx,\acty \right\}$ & Agent's action in $t =1,2$.\\
+				$\theta \in \left[0,1\right]$ & Prior probability that agent is of type $X$, $\Pr (T = X)$.\\
+				$\shortparallel$, $\nshortparallel$ & Concordance, lack of concordance. \\
+				$p$, $q$ & Project success probability given agent's actions and environment; $p = \Pr (O = S | a \shortparallel E)$ and $q = \Pr (O = S | a \shortparallel E)$ with $0 \leq q < p \leq 1$.\\
+				$\xi$ & Prior probability that agent's type concords with environment; $\xi=\theta$ if $E=\overline{X}$ and $\xi=1-\theta$ if $E=\overline{Y}$. \\
+				$\kappa_t^k = \left<w_t^S, w_t^F \right>$ & Contract offered by principal (take-it-or-leave-it) in $t=1,2$; fixed-wage ($k=f$) so that $w_t^S = w_t^F$ or outcome-contingent ($k=c$) with $w_t^S$ the wage if success ($O=S$) and $w_t^F$ the wage if failure ($O=F$).\\
+				$\tstr \in \left\{0,1 \right\}$ & Agent T's strategy for contract type $k$ in environment $E$; $\tstr=P(a=x|T,k,E)$.\\
+				$\tStr\left(O\right)$ & Probability of outcome $O$ for chosen strategy $\tstr$; $\tStr\left(O\right)=P\left(O|E,a=x\right)\tstrx+P\left(O|E,a=y\right)\tstry$.\\
+				$\estX(O|E,k)$ & Principal's updated belief that agent is type X $(T=X)$ after observing contract type $k$, environment type $E$ and outcome $O$; $\estX(O|E,k)=\frac{\xStr\probagtx}{\xStr\probagtx+\yStr\probagty}$.\\
+				
+				%\midrule
+				%\multicolumn{2}{l}{\itshape Decisions / Mixed Strategies}\\
+				?& ? \\
+				\bottomrule
+				\end{tabular*}
+				\end{center}
+				\end{table}	
+%%% END TABLE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Introduction}
+
+Repeated interactions between parties is one of the core complicating factors for empirical study in almost every social science discipline. When there is an expectation of future interaction, people behave differently than they would in one-time interactions. The formalization of these interactions through contracts is of particular interest to scholars in management, finance, economics, and law. Empirical research observes that repeated contracting between the same parties includes changing contractual terms over time. The theoretical contract literature posits that relational contracting would serve as a substitute for contract complexity and that repeated interactions between parties would result in contractual simplicity. However, Ryall and Sampson provide evidence that repeated interactions lead to an increase in specificity and complexity, contrary to the theoretical intuition \citep{Ryall:Sampson:2009}. We seek to explain why some contractual relationships increase in complexity and why others remove complexity over time.
+
+We employ a principal-agent model over two periods and consider a contractual provision within the framework of a larger contract. The principal hires the agent to complete a project and the agent can choose the action for implementation. 
+
+Agents incur a disutility based on the action chosen, representing an agent's persistent preference for one type of action over the other. This disutility or preference represents in the theoretical model an agent's past training, personal preferences, skill set, or individual costs incurred in implementation.
+
+The success of the project depends on whether the action the agent chooses is appropriate for a random, but persistent environment. This environmental condition theoretically represents an initially unknown business climate or project specification need. If the agent's action matches the environmental condition, the probability of a successful project outcome is greater than if the agent chooses the action that doesn't match the environment. If the agent incurs a disutility from an action that matches the environment, then the principal faces the traditional agent in the principal-agent literature. If the agent prefers the action that matches the environment, then the principal and agent's incentives are aligned. With aligned incentives, the principal does not need to provide additional compensation for the agent to choose the principal's preferred action.
+
+Our model allows the principal to offer either a simple, fixed-wage contract with payment independent of the project outcome, or a more complex outcome-contingent contract, with the possibility of a differential payment based on the project's success. We assume that the principal can make one offer and the agent can accept or reject with no possibility of negotiation. The principal cannot commit to a multi-period contract at the beginning of the first period.
+
+We find that the probabilities of success, the payoff from success, the agent's disutility, and the prior probabilities of the environment and agent type influence the optimal first stage contracts that the principal offers. The model's solution allows for contracts that grow more complex in the second stage and for contracts that simplify in the second stage. The resulting intuition offers a solution for the repeated contracting puzzle and explains why some contractual relationships grow more complex and while others simplify.
+
+If the principal believes the probability is sufficiently high that the agent's incentives are aligned, then the principal is more likely to use a simpler contract and delegate the real authority to the agent. However, when the stakes of the project are sufficiently high, relative to the disutility that the agent incurs, then the principal is more inclined to induce the agent to take the appropriate action. As the differential benefit of the appropriate action diminishes, however, the project's success must be ever greater to justify this expense.
+
+When the principal delegates authority to the agent, the principal is able to update her belief's about the agent's preferences based on the project's outcome. The principal is thus able to add complexity and increase the probability of success in later periods if the agent's incentives are less likely aligned. Additionally, the principal could preserve the simplicity of the contract if the agent's incentives appear favorable. The benefit to the principal from observing the outcome of an early stage simple contract is known to the agent. Thus agents have an incentive to incur early stage disutility in order to seek additional compensation in later interactions. This rent seeking behavior from agents with aligned interests reveals that agent's prefer the additional compensation that accompanies complex contracts.
+
+%BEGIN_FOLD {repeated interactions}
+Anticipated repeated interactions between actors creates strategic possibilities in early stage choices. These possibilities, and the empirically observable distortions, can be impacted by contracting frictions, but cannot be explained away using a simple explanation of contracting costs. Repeated partners have the opportunity to learn about each other and modify their subsequent interactions accordingly. If a principal observes an unfavorable outcome early, she may attribute that to environmental conditions, agent choices, or bad luck. When the environment is observable, then the agent choice explanation becomes more likely and the principal may choose to introduce additional complexity into the contract. Where agent actions are unobservable or unenforceable, the principal will need to align the agent's incentives by differential payment based on the project's outcome.
+%END_FOLD
+
+If a principal observes a more favorable outcome in early interactions, she may consider the possibility that an agent made a choice that is in line with the principal's interests. In this case, the principal may choose to avoid incurring the costs of differential payments to the agent if the principal expects the agent to make similar choices in the future. Additionally, if the principal observes an environment that is more closely aligned to the choices the principal expects the agent to make, then the principal could choose to remove a complex provision and avoid the required payments to the agent in the future.
+
+\section{The Model}
+
+A risk-neutral principal owns a project that, with the help of an agent, stochastically realizes one of two outcomes $O\in\left\lbrace S,F\right\rbrace$, where success $O=S$ yields a value $\valsuc$ and failure $O=F$ yields a value of zero. The project is available for two consecutive periods in a time-invariant environment that realizes a stochastic state $\env\in\left\lbrace \envx,\envy\right\rbrace$ with probability $\probenvx$ that the environment is of type $\envx$. The risk-neutral agent is one of two time-invariant types $\type\in\left\lbrace \agtx,\agty\right\rbrace$ with probability $\probagtx$ that the agent is of type $\agtx$. The project requires the agent to choose one of two actions $a\in\left\lbrace \actx,\acty\right\rbrace$.
+
+\begin{definition}{[Concordance.]}
+	An action concords with the environment if $\left(\act=\actx \land \env=\envx\right) \lor \left(\act=\acty \land \env=\envy\right)$. An action concords with the agent's type if $\left(\act=\actx \land \type=\agtx\right) \lor \left(\act=\acty \land \type=\agty\right)$. A type concords with the environment if $\left(\type=\agtx \land \env=\envx\right) \lor \left(\type=\agty \land \env=\envy\right)$. Let $\act\conc\env$, $\act\conc\type$ or $\type\conc\env$ represent concordance. Let $\act\nconc\env$, $\act\nconc\type$ or $\type\nconc\env$ represent a lack of concordance.
+\end{definition}
+
+The probability of the project's success depends on whether the agent's action is the appropriate strategy for the environment and are independent of the agent's type. If the agent chooses an action that is in concordance with the environment, the probability of success is $p=P\left( O=S|\act\conc\env\right) $. If the agent chooses an action that is not in concordance with the environment, the probability of success is $q=P\left( O=S|\act\nconc\env\right) $, where $0\leq q<p\leq 1$.
+
+The agent's interests depend on the agent's type and are independent of the environment. If the agent chooses an action that is not in concordance with its type, $\act\nconc\type$, the agent receives a disutility $\disutility$. If the agent chooses an action that is in concordance with its type, $\act\conc\type$, the agent receives no disutility.
+
+\begin{definition}{[Aligned agent or traditional agent.]}
+	The agent is considered aligned if his interests concord with the environment, $\type\conc\env$. The agent is considered traditional if his interests do not concord with the environment, $\type\nconc\env$.
+\end{definition}
+
+The symmetry of the probability of success allows for mathematical convenience from the introduction of additional notation. The prior probability that the agent is aligned for environment $\envx$ is $\probagtx=P(\agtx)$ and for environment $\envy$ is $\probagty=P(\agty)$. Let $\agtalign$ represent the probability that the agent is aligned.
+
+\begin{definition}{[Environment independent alignment.]}
+	$\agtalign = \probagtx$ if $\env=\envx$ and $\agtalign = \probagty$ if $\env=\envy$.
+\end{definition}
+
+The principal can offer an agent a one-period contract of the form $\kappa_t^k=\left\langle w_t^S,w_t^F\right\rangle$, where the contract $k\in \left\lbrace c,f\right\rbrace$ takes either an outcome-contingent form, $c$, or fixed-wage form, $f$. If the contract is fixed-wage, $k=f$, then the wage is the same for either project outcome, $w_t^S=w_t^F$. If the contract is outcome-contingent, $k=c$, then there is a wage difference for the agent based on the outcome of the project, $w_t^S\neq w_t^F$. The contract offer is take-it-or-leave-it and the game ends if the agent rejects. The principal cannot offer a menu of contracts; combined with the take-it-or-leave-it nature of the offer, screening and negotiation are eliminated from the model.
+
+The timing of the game is as follows and is summarized in Figure 1. The principal observes the probabilities of the agent's type and the environment and makes a first-period offer $\kappa_1^k$ either of the fixed-wage form $\kappa_1^f$ or outcome-contingent form $\kappa_1^c$. The agent may either accept or reject the principal's offer. If he rejects, the game ends with no possibility of a second period. If he accepts, the agent observes the environment and chooses an action. The project proceeds with probability of success conditional on whether the action concords with the environment.
+
+%%%%%%%%%%%%%%%%%%%%%
+% BEGIN FIGURE TIMELINE
+\begin{figure}
+	\caption{Sequence of Events}
+	\label{fig:timeline}
+	
+	\vspace{15pt}
+	\centering
+	\begin{tikzpicture}[scale=1.1]
+	
+	{\fontsize{10}{0}\selectfont
+		
+		% LINE
+		\draw [line width=1pt, ->] (-7,0) -- (7,0); 
+		
+		% TICK 1
+		\draw [thin] (-6,-.1) node [below] {$A$} -- (-6,.1) node [above] {$t=1$} ; 
+		\node [text width=50] at (-6, -1) {\scalebox{.7}{\parbox{1.5\textwidth}{\centering Agent observes type $A$ }}};
+		
+		% TICK 2
+		\draw [thin] (-4,-.1) node [below] {$\kappa_1$} -- (-4,.1) node [above] {$t=2$} ; 
+		\node [text width=50] at (-4, -1) {\scalebox{.7}{\parbox{1.5\textwidth}{\centering Stage-1 contract offered }}};
+		
+		% TICK 3
+		\draw [thin] (-2,-.1) node [below] {$E$, $a_1$} -- (-2,.1) node [above] {$t=3$} ; 
+		\node [text width=50] at (-2, -1.2) {\scalebox{.7}{\parbox{1.5\textwidth}{\centering Both agent and principal observe environment $E$, agent chooses action $a_1$}}};
+		
+		% TICK 4
+		\draw [thin] (0,-.1) node [below] {payoffs} -- (0,.1) node [above] {$t=4$} ;
+		\node [text width=50] at (0, -1) {\scalebox{.7}{\parbox{1.5\textwidth}{\centering Stage-1 payoffs are realized }}};
+		
+		% TICK 5
+		\draw [thin] (2,-.1) node [below] {$\kappa_2$} -- (2,.1) node [above] {$t=5$} ;
+		\node [text width=50] at (2, -1) {\scalebox{.7}{\parbox{1.5\textwidth}{\centering Stage-2 contract offered }}};
+		
+		% TICK 6
+		\draw [thin] (4,-.1) node [below] {$a_2$} -- (4,.1) node [above] {$t=6$} ;
+		\node [text width=50] at (4, -1) {\scalebox{.7}{\parbox{1.5\textwidth}{\centering Agent chooses action $a_2$}}};
+		
+		% TICK 7
+		\draw [thin] (6,-.1) node [below] {payoffs} -- (6,.1) node [above] {$t=7$} ; 
+		\node [text width=50] at (6, -1) {\scalebox{.7}{\parbox{1.5\textwidth}{\centering Stage-2 payoffs are realized }}};
+	}
+	
+	%node at (-5, 0) {$\circ$}-- (-3,0) node {$\blacktriangle$}--(-1,0) node {$\bullet$} --(1,0) node {$\blacktriangle$} --(3,0) node {$\bullet$} --(5,0) node {$$};
+	%
+	%
+	%\draw[line width=1pt, ->] (5,0) .. controls (2.5,1.3) and (-.5,1.3) .. (-2.9,0.1);
+	%\draw [line width=1pt] (-5,-0.05) node [yshift=.2in] {FM $A$} --(-5,-1.95) node {$\blacksquare$};
+	%\node [above] at (-4,0) {share};
+	%\node [right] at (-5,-1) {conceal};
+	%\coordinate (X) at (-5,.9);
+	%\node[rotate=90,anchor=west] (N) at (X) {$t=1$};
+	%
+	%\draw [line width=1pt] (-3,-0.05) --(-3,-1.95) node {$\blacksquare$};
+	%\node [above] at (-2,0) {$p_B$};
+	%\node [right] at (-3,-1) {$1-p_B$};
+	%
+	%\draw [line width=1pt] (-1,-0.05) node [yshift=.2in] {FM $B$}--(-1,-1.95) node {$\blacksquare$};
+	%\node [above] at (0,0) {share};
+	%\node [right] at (-1,-1) {conceal};
+	%\coordinate (X) at (-1,.9);
+	%\node[rotate=90,anchor=west] (N) at (X) {$t=2,4,\ldots$};
+	%
+	%\draw [line width=1pt] (1,-0.05) --(1,-1.95) node {$\blacksquare$};
+	%\node [above] at (2,0) {$p_A$};
+	%\node [right] at (1,-1) {$1-p_A$};
+	%
+	%\draw [line width=1pt] (3,-0.05) node [yshift=.2in] {FM $A$} --(3,-1.95) node {$\blacksquare$};
+	%\node [above] at (4,0) {share};
+	%\node [right] at (3,-1) {conceal};
+	%\coordinate (X) at (3,.9);
+	%\node[rotate=90,anchor=west] (N) at (X) {$t=3,5,\ldots$};
+	
+	\end{tikzpicture}
+	
+\end{figure}
+% END FIGURE TIMELINE
+%%%%%%%%%%%%%%%%%%%%%
+
+The principal observes the environment and the first-stage project outcome and may update beliefs about the agent's type. Using Bayes' rule, the principal estimates the probability that the agent is type $\agtx$ to be
+\begin{equation}
+\estX(O|E,k)=\frac{\xStr\probagtx}{\xStr\probagtx+\yStr\probagty}
+\end{equation}
+where $A_T$ represents the probability of the realized outcome $O$ for the chosen strategy of agent $T$
+\begin{eqnarray*}
+\xStr=P(O|E,\act=\actx)\xstrx+P(O|E,\act=\acty)\xstry\\
+\yStr=P(O|E,\act=\actx)\ystrx+P(O|E,\act=\acty)\ystry
+\end{eqnarray*}
+and $\tstr(k,E)=P(\act=\actx|,k,E)$ represents the probability of a particular strategy given the agent type, contract type, and realized environment. The principal's updated beliefs about the probability that the agent's type concords with the environment are represented as $\estalignEkO$ with respect to the environment and outcome.
+
+The principal then offers a second-period contract $\kappa_2^k$ that again takes the form of a fixed-wage contract $\kappa_2^f$ or an outcome-contingent contract $\kappa_2^c$. The agent accepts or rejects the offer and if he rejects, the game ends. If he accepts, the agent chooses an action and the project proceeds with the probability of success conditional on whether the action concords with the environment.
+
+The model is a stochastic blend of the traditional principal-agent framework and an agency model in which the agent's interests are aligned with those of the principal. If the agent incurs a disutility by choosing an action that concords with the environment, the optimal contract is consistent with the principal-agent literature and proposed solutions. This equilibrium is explored in its simplest form in the second-stage optimal contract. The first-stage contracts offer additional complexity to the model. As observed below, only the fixed-wage contracts allow for the principal to update her beliefs about the agent's type. She thus potentially faces a trade-off between learning information about the agent's type to the benefit of the second-stage contract, at a cost of a less-efficient first-period contract.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Equilibrium Analysis}
+
+%BEGIN_FOLD {Second Stage}
+
+\subsection{Second Stage}
+
+%BEGIN_FOLD {Simple Contract}
+
+%END_FOLD
+
+%BEGIN_FOLD {Complex Contract}
+
+%END_FOLD
+
+%BEGIN_FOLD {Optimal Second Stage Contract}
+
+%END_FOLD
+
+%END_FOLD
+
+\subsection{First Stage}
+
+%BEGIN_FOLD {Environment and First Stage Outcome}
+
+%BEGIN_FOLD {Description of environment and outcome reveal}
+
+%END_FOLD
+
+%BEGIN_FOLD {Discussion of updating process in general}
+
+%END_FOLD
+
+%END_FOLD
+
+%BEGIN_FOLD {First Stage Overview}
+
+%BEGIN_FOLD {Contract Types Offered}
+
+%END_FOLD
+
+%BEGIN_FOLD {Environment Revealed to Agent}
+
+%END_FOLD
+
+%BEGIN_FOLD {Agent Strategies}
+
+%END_FOLD
+
+%BEGIN_FOLD {Pooling Strategies and No Information Revealed}
+
+%END_FOLD
+
+%BEGIN_FOLD {Separating Strategies and Information Updating}
+
+%END_FOLD
+
+%BEGIN_FOLD {Profile of Critical Values}
+
+%END_FOLD
+
+%END_FOLD
+
+\subsubsection{Equilibrium Characterization if Learning is Not Effective}
+
+%BEGIN_FOLD {Equilibrium Characterization from No Learning}
+
+%BEGIN_FOLD {No Learning, Estimated Alignment Too Low}
+
+%BEGIN_FOLD {Complex Contract}
+
+\begin{lemma}
+	\label{EqNLC}
+	
+	\underline{Alignment for Complex Contract.} If $\estalignEkS<\crittwo$, the probability of alignment is too low or the stakes of the project are too high. The principal will prefer a second-stage complex contract for either outcome, given first-stage contract type $k$ and environment $E$.
+	
+	\begin{proof}
+	If $\estalignEkS<\crittwo$ for a given environment $\env$, then by Lemma $--$, $\al<\crittwo$ and $\estalignEkF<\crittwo$ for the same environment $\env$. Thus for $\env$, for either realized outcome $O=S$ or $O=F$, the posterior belief satisfies $\estalignEkO<\crittwo$ and by Lemma $--$, the principal will prefer contract type $k=C$.
+	\end{proof} 
+
+\end{lemma}
+
+%END_FOLD
+
+%BEGIN_FOLD {Parameter Values}
+
+\begin{lemma}
+	\label{EqNLCPV}
+	
+	\underline{Parameter Values for Complex Contract.} If $\estalignEkS<\crittwo$, the probability of alignment is too low or the stakes of the project are too high. The principal will prefer a second-stage complex contract for either outcome, given first-stage contract type $k$ and environment $E$.
+	
+	\begin{proof}
+		content...
+	\end{proof} 
+	
+\end{lemma}
+
+%END_FOLD
+
+%BEGIN_FOLD {Comparative Statics}
+
+\begin{lemma}
+	\label{EqNLCCS}
+	
+	\underline{Comparative Statics for Complex Contract.} If $\estalignEkS<\crittwo$, the probability of alignment is too low or the stakes of the project are too high. The principal will prefer a second-stage complex contract for either outcome, given first-stage contract type $k$ and environment $E$.
+	
+	\begin{proof}
+		content...
+	\end{proof} 
+	
+\end{lemma}
+
+%END_FOLD
+
+%END_FOLD
+
+%BEGIN_FOLD {No Learning, Estimated Alignment Too High}
+
+%BEGIN_FOLD {Simple Contract}
+
+\begin{lemma}
+	\label{EqNLS}
+	
+	\underline{Alignment for Simple Contract.} If $\crittwo<\estalignEkF$, the probability of alignment is sufficiently high or the stakes of the project are sufficiently low. The principal will prefer a second-stage simple contract for either outcome, given first-stage contract type $k$ and environment $E$.
+	
+	\begin{proof}
+		If $\crittwo<\estalignEkF$ for a given environment $\env$, then by Lemma $--$, $\crittwo<\al$ and $\crittwo<\estalignEkF$ for the same environment $\env$. Thus for $\env$, for either realized outcome $O=S$ or $O=F$, the posterior belief satisfies $\crittwo<\estalignEkO$ and by Lemma $--$, the principal will prefer contract type $k=S$.
+	\end{proof} 
+	
+\end{lemma}
+
+%END_FOLD
+
+%BEGIN_FOLD {Parameter Values}
+
+\begin{lemma}
+	\label{EqNLSPV}
+	
+	\underline{Parameter Values for Simple Contract.} If $\estalignEkS<\crittwo$, the probability of alignment is too low or the stakes of the project are too high. The principal will prefer a second-stage complex contract for either outcome, given first-stage contract type $k$ and environment $E$.
+	
+	\begin{proof}
+		content...
+	\end{proof} 
+	
+\end{lemma}
+
+%END_FOLD
+
+%BEGIN_FOLD {Comparative Statics}
+
+\begin{lemma}
+	\label{EqNLSCS}
+	
+	\underline{Comparative Statics for Simple Contract.} If $\estalignEkS<\crittwo$, the probability of alignment is too low or the stakes of the project are too high. The principal will prefer a second-stage complex contract for either outcome, given first-stage contract type $k$ and environment $E$.
+	
+	\begin{proof}
+		content...
+	\end{proof} 
+	
+\end{lemma}
+
+%END_FOLD
+
+%END_FOLD
+
+%END_FOLD
+
+\subsubsection{Equilibrium Characterization if Learning is Effective}
+
+%BEGIN_FOLD {Equilibrium Characterization from Learning}
+
+%BEGIN_FOLD {Learning after success}
+
+%BEGIN_FOLD {Xi less than crit}
+
+\begin{lemma}
+\label{EqYLPriXLC}
+
+	\underline{Expect complex second contract favorable.} If $\al<\crittwo$, the principal's prior probability that the agent is aligned is below the second-period critical threshold. The principal expects to prefer a second-stage simple contract for either outcome, given first-stage contract type $k$ and environment $\env$.
+
+\begin{proof}
+	\singlespacing
+	The posterior belief for a given environment $\env$ is formed according to the Bayesian updating process described in the model. 
+	\begin{equation}
+	\estX(O|E,k)=\frac{\xStrO\probagtx}{\xStrO\probagtx+\yStrO\probagty}
+	\end{equation}
+	where $A_T$ represents the probability of the realized outcome $O$ for the chosen strategy of agent $T$
+	\begin{eqnarray*}
+		\StrTO{\agtx}{O}=P(O|E,\act=\actx)\xstrx+P(O|E,\act=\acty)\xstry\\
+		\StrTO{\agty}{O}=P(O|E,\act=\actx)\ystrx+P(O|E,\act=\acty)\ystry
+	\end{eqnarray*}
+	and $\tstr(k,E)=P(\act=\actx|,k,E)$ represents the probability of a particular strategy given the agent type, contract type, and realized environment.
+	
+	The ex-ante expected value for the posterior belief, given a particular environment $\env$ and contract type $k$ is
+	\begin{equation}
+	E_1\left[\estX(O|E,k)\right]=\estX(S|E,k)*P(S|E,k)+\estX(F|E,k)*P(F|E,k)
+	\end{equation}
+	Because the outcome of a project is limited to success and failure, $O\in{S,F}$, we must have $P(S|E,k)=1-P(F|E,k)$. Therefore, substituting this equation and the values from the updating process, we see 
+	\begin{equation}
+	E_1\left[\estX(O|E,k)\right]=\frac{\StrTO{\agtx}{S}\probagtx}{\StrTO{\agtx}{S}\probagtx+\StrTO{\agty}{S}\probagty}*(1-P(F|E,k))+\frac{\StrTO{\agtx}{F}\probagtx}{\StrTO{\agtx}{F}\probagtx+\StrTO{\agty}{F}\probagty}*P(F|E,k)
+	\end{equation}
+\end{proof}
+
+\end{lemma} 
+
+%END_FOLD
+
+%BEGIN_FOLD {Updated xi greater than crit}
+
+\begin{lemma}
+	\label{EqYLPosXGC}
+	
+	\underline{Expect complex second contract favorable.} If $\crittwo<\estalignEkS$, the principal's prior probability that the agent is aligned is below the second-period critical threshold. The principal expects to prefer a second-stage simple contract for either outcome, given first-stage contract type $k$ and environment $\env$.
+	
+	\begin{proof}
+		content...
+	\end{proof}
+	
+\end{lemma} 
+
+%END_FOLD
+
+%BEGIN_FOLD {Principal value from learning}
+
+\begin{lemma}
+	\label{EqYLSPVL}
+	
+	\underline{Principal value from learning after Success.} If $\al<\crittwo$, the principal's prior probability that the agent is aligned is below the second-period critical threshold. The principal expects to prefer a second-stage simple contract for either outcome, given first-stage contract type $k$ and environment $E$.
+	
+	\begin{proof}
+		content...
+	\end{proof}
+	
+\end{lemma} 
+
+%END_FOLD
+
+%BEGIN_FOLD {Change in first stage threshold}
+
+\begin{lemma}
+	\label{EqYLSCh1Crit}
+	
+	\underline{Change in first stage threshold after Success.} If $\al<\crittwo$, the principal's prior probability that the agent is aligned is below the second-period critical threshold. The principal expects to prefer a second-stage simple contract for either outcome, given first-stage contract type $k$ and environment $E$.
+	
+	\begin{proof}
+		content...
+	\end{proof}
+	
+\end{lemma} 
+
+%END_FOLD
+
+%BEGIN_FOLD {Agent loss from learning}
+
+\begin{lemma}
+	\label{EqYLSALL}
+	
+	\underline{Agent loss from learning after Success.} If $\al<\crittwo$, the principal's prior probability that the agent is aligned is below the second-period critical threshold. The principal expects to prefer a second-stage simple contract for either outcome, given first-stage contract type $k$ and environment $E$.
+	
+	\begin{proof}
+		content...
+	\end{proof}
+	
+\end{lemma} 
+
+%END_FOLD
+
+%BEGIN_FOLD {Change in strategy}
+
+\begin{lemma}
+	\label{EqYLSChStr}
+	
+	\underline{Change in strategy after Success.} If $\al<\crittwo$, the principal's prior probability that the agent is aligned is below the second-period critical threshold. The principal expects to prefer a second-stage simple contract for either outcome, given first-stage contract type $k$ and environment $E$.
+	
+	\begin{proof}
+		content...
+	\end{proof}
+	
+\end{lemma} 
+
+%END_FOLD
+
+%BEGIN_FOLD {Equilibrium threshold and strategy}
+
+\begin{lemma}
+	\label{EqStrYLS}
+	
+	\underline{Equilibrium and strategy after Success.} If $\al<\crittwo$, the principal's prior probability that the agent is aligned is below the second-period critical threshold. The principal expects to prefer a second-stage simple contract for either outcome, given first-stage contract type $k$ and environment $E$.
+	
+	\begin{proof}
+		content...
+	\end{proof}
+	
+\end{lemma} 
+
+%END_FOLD
+
+%END_FOLD
+
+%BEGIN_FOLD {Learning after failure}
+
+%BEGIN_FOLD {Xi greater than crit}
+
+\begin{lemma}
+	\label{EqYLPriXGC}
+	
+	\underline{Expect complex second contract favorable.} If $\crittwo<\al$, the principal's prior probability that the agent is aligned is below the second-period critical threshold. The principal expects to prefer a second-stage simple contract for either outcome, given first-stage contract type $k$ and environment $E$.
+	
+	\begin{proof}
+		content...
+	\end{proof}
+	
+\end{lemma} 
+
+%END_FOLD
+
+%BEGIN_FOLD {Updated xi less than crit}
+
+\begin{lemma}
+	\label{EqYLPosXLC}
+	
+	\underline{Expect complex second contract favorable.} If $\estalignEkF<\crittwo$, the principal's prior probability that the agent is aligned is below the second-period critical threshold. The principal expects to prefer a second-stage simple contract for either outcome, given first-stage contract type $k$ and environment $E$.
+	
+	\begin{proof}
+		content...
+	\end{proof}
+	
+\end{lemma} 
+
+%END_FOLD
+
+%BEGIN_FOLD {Principal value from learning}
+
+\begin{lemma}
+	\label{EqYLFPVL}
+	
+	\underline{Principal value from learning after Failure.} If $\al<\crittwo$, the principal's prior probability that the agent is aligned is below the second-period critical threshold. The principal expects to prefer a second-stage simple contract for either outcome, given first-stage contract type $k$ and environment $E$.
+	
+	\begin{proof}
+		content...
+	\end{proof}
+	
+\end{lemma} 
+
+%END_FOLD
+
+%BEGIN_FOLD {Change in first stage threshold}
+
+\begin{lemma}
+	\label{EqYLFCh1Crit}
+	
+	\underline{Change in first stage threshold after Failure.} If $\al<\crittwo$, the principal's prior probability that the agent is aligned is below the second-period critical threshold. The principal expects to prefer a second-stage simple contract for either outcome, given first-stage contract type $k$ and environment $E$.
+	
+	\begin{proof}
+		content...
+	\end{proof}
+	
+\end{lemma} 
+
+%END_FOLD
+
+%BEGIN_FOLD {Agent loss from learning}
+
+\begin{lemma}
+	\label{EqYLFALL}
+	
+	\underline{Agent loss from learning after Failure.} If $\al<\crittwo$, the principal's prior probability that the agent is aligned is below the second-period critical threshold. The principal expects to prefer a second-stage simple contract for either outcome, given first-stage contract type $k$ and environment $E$.
+	
+	\begin{proof}
+		content...
+	\end{proof}
+	
+\end{lemma} 
+
+%END_FOLD
+
+%BEGIN_FOLD {Change in strategy}
+
+\begin{lemma}
+	\label{EqYLFChStr}
+	
+	\underline{Change in strategy after Failure.} If $\al<\crittwo$, the principal's prior probability that the agent is aligned is below the second-period critical threshold. The principal expects to prefer a second-stage simple contract for either outcome, given first-stage contract type $k$ and environment $E$.
+	
+	\begin{proof}
+		content...
+	\end{proof}
+	
+\end{lemma} 
+
+%END_FOLD
+
+%BEGIN_FOLD {Equilibrium threshold and strategy}
+
+\begin{lemma}
+	\label{EqStrYLF}
+	
+	\underline{Equilibrium and strategy after Failure.} If $\al<\crittwo$, the principal's prior probability that the agent is aligned is below the second-period critical threshold. The principal expects to prefer a second-stage simple contract for either outcome, given first-stage contract type $k$ and environment $E$.
+	
+	\begin{proof}
+		content...
+	\end{proof}
+	
+\end{lemma} 
+
+%END_FOLD
+
+%END_FOLD
+
+%END_FOLD
+
+
+
+
+
+%%%%%%% REFERENCES
+\newpage
+{
+\bibliography{contractcomplexity}
+\bibliographystyle{ecta}
+}
+%%%%%%% REFERENCES
+
+
+\end{document}
