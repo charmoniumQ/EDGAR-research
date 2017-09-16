@@ -5,7 +5,8 @@ import os.path
 import urllib.request
 from mining.retrieve_index import get_index
 from mining.retrieve_10k import get_risk_factors
-from analysis.new_directory import new_directory, get_name
+# from analysis.new_directory import new_directory, get_name
+from util.new_directory import new_directory, get_name
 
 year = 2016
 qtr = 3
