@@ -1,0 +1,167 @@
+% VERSION TRACKER
+% Cluster Analysis of Risk Factors
+% Michael Seeligson and Team
+
+\RequirePackage{lineno} % line numbers
+\documentclass[12pt,english,draft]{article}
+\usepackage[latin1]{inputenc}
+\usepackage[english]{babel}
+\usepackage{amsmath, amsthm, amssymb, amsfonts}
+\usepackage{stackrel}
+\usepackage{mathrsfs}
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage{multirow,array}
+\usepackage{tikz}
+\usepackage{setspace}
+\usepackage{natbib}
+\usepackage{lineno}
+\usepackage{nicefrac}
+\usepackage{booktabs}
+\usepackage[title]{appendix}
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{definition}{Definition}
+\newtheorem{corollary}{Corollary}
+\newtheorem{lemma}{Lemma}
+\newtheorem{conjecture}{Conjecture}
+
+% GRAPHICS PACKAGE
+\usepackage{tikz}
+\usepackage{pgfplotstable}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.10}
+\usepgfplotslibrary{fillbetween}
+\pgfplotsset{scaled y ticks=false}
+\pgfplotsset{scaled x ticks=false}
+\usetikzlibrary{arrows,decorations.pathreplacing,patterns}
+\usetikzlibrary{intersections,calc}
+
+% TO DO NOTES
+\usepackage[obeyDraft]{todonotes}
+ \newcounter{todocounter}
+ \newcommand{\todonum}[2][]
+ {\stepcounter{todocounter}\todo[#1]{\thetodocounter: #2}}
+\usepackage{MnSymbol} % needed for something else
+
+\newcommand{\mathsym}[1]{{}}
+\newcommand{\unicode}[1]{{}}
+\newcounter{mathematicapage}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% TITLE PAGE
+\title{Cluster Analysis of Risk Factors %\thanks{%
+%We thank \ldots}
+}
+
+\author{
+Michael Seeligson\thanks{%
+	The University of Texas at Dallas, Naveen Jindal School of Management, 800
+	W.~Campbell Rd.~(GC10), Richardson, TX 75080, USA; E: \href{mailto:michael.seeligson@utdallas.edu%
+	}{michael.seeligson@utdallas.edu}; P:~+1-972-883-4464.}
+%
+\and 
+%
+Michael Seeligson\thanks{%
+	The University of Texas at Dallas, Naveen Jindal School of Management, 800
+	W.~Campbell Rd.~(GC10), Richardson, TX 75080, USA; E: \href{mailto:michael.seeligson@utdallas.edu%
+	}{michael.seeligson@utdallas.edu}; P:~+1-972-883-4464.} %
+}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+%\setpagewiselinenumbers
+%\modulolinenumbers[1]
+%\linenumbers
+
+\maketitle
+
+\begin{abstract}
+We study the risk factors included in the annual reports of corporate public filings. Using several different linguistic algorithms, we identify prototypical examples of each type of risk factor. We demonstrate the evolution of these risk factors over time and the introduction of new risk factor concepts. The methodology and results of this work operationalize the written language included in annual reports and provides data that can supplement the existing quantitative analysis in the finance, accounting, and economics.  
+\end{abstract}
+
+
+
+\doublespacing
+\newpage
+
+% TABLE PACKAGES
+
+% GRAPHICS PACKAGE
+%\usepackage{tikz}
+%\usepackage{pgfplotstable}
+%\usepackage{pgfplots}
+%\pgfplotsset{compat=1.13}
+%\usepgfplotslibrary{fillbetween}
+%\pgfplotsset{scaled y ticks=false}
+%\pgfplotsset{scaled x ticks=false}
+%\usepackage{graphicx}
+
+%\usepackage[position=b]{subfig}
+%\usepackage{subfloat} %work with subfig and subfloat instead
+%\renewcommand{\thesubfigure}{\Alph{subfigure}}
+
+
+
+\section*{Introduction}
+
+
+
+
+
+
+\section{The Model}
+
+
+
+
+
+
+\section{Data and Empirical Methodology}
+
+
+
+
+
+
+
+\section{Results and Empirical Analysis}
+
+
+
+
+
+
+
+\section{Conclusion}
+
+
+
+
+\begin{appendices}
+
+
+\section{The LDA Model}
+
+\section{The LSA Model}
+
+\section{Dictionary of Legal Tuples}
+
+\end{appendices}
+
+
+%%%%%%% REFERENCES
+\newpage
+{
+\bibliography{clusterspaper}
+\bibliographystyle{ecta}
+}
+%%%%%%% REFERENCES
+
+
+\end{document}
