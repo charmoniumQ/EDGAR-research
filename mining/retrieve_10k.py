@@ -5,7 +5,7 @@ import mining.cache as cache
 import mining.parsing as parsing
 
 def get_risk_factors(path, enable_cache, throw=False):
-    '''Returns the Item 1A section of the 8k form
+    '''Returns the Item 1A section of the 10k form
 
 if throw is False, then errors will fail silently and an empty string will be returned
 '''
@@ -19,7 +19,7 @@ if throw is False, then errors will fail silently and an empty string will be re
         if throw:
             raise exc
         else:
-            return {}
+            return ''
 
 item_headers = [
     'Item 1', 'Item 1A', 'Item 1B', 'Item 2', 'Item 3', 'Item 4', 'Item 5',
