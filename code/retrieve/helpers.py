@@ -1,14 +1,18 @@
 from __future__ import print_function
+import random
 from six.moves.html_parser import HTMLParser
-from bs4 import BeautifulSoup
+# from bs4 import BeautifulSoup
+import itertools
 import re
 
-def SGML_to_fileinfos(sgml_contents):
-    '''Inputs the downloaded SGML and outputs a list of dicts (one dict for each file)
 
-    Each document described in the SGML gets converted to a dict of all of its attributes, including the 'text', which has actual text of a document'''
+def SGML_to_fileinfos(sgml_contents):
+    '''Inputs the downloaded SGML and outputs a list of dicts
+
+    Each document described in the SGML gets converted to a dict of all of its
+    attributes, including the 'text', which has actual text of a document'''
+
     doc_pattern = re.compile(b'<DOCUMENT>(.*?)</DOCUMENT>', re.DOTALL)
-    files = []
     for doc_match in doc_pattern.finditer(sgml_contents):
         this_file = {}
         doc_text = doc_match.group(1)
@@ -31,19 +35,23 @@ def SGML_to_fileinfos(sgml_contents):
             this_file[tagname] = content
         yield this_file
 
+
 def find_form(fileinfos, form_type):
-    '''Returns the decoded 10-K string from the list of dict of fileinfos from SGML_to_fileinfos'''
+    '''Returns the decoded 10-K string from the list of dict of fileinfos from
+    SGML_to_fileinfos'''
     for file_info in fileinfos:
         if file_info['type'] == form_type:
             return file_info['text'].decode()
     else:
         raise ParseError('Cannot find the 10K')
 
+
 def is_html(text):
     tags = 'p div td'.split(' ')
     tags += [tag.upper() for tag in tags]
     return any('</{tag}>'.format(**locals()) in text
                for tag in tags)
+
 
 def clean_html(html):
     '''Puts newlines where they belong in HTML and removes tags'''
@@ -58,13 +66,17 @@ def clean_html(html):
     newline_tags = 'p div tr br h1 h2 h3 h4 h5'.split(' ')
     newline_tags += [tag.upper() for tag in newline_tags]
     for tag in newline_tags:
-        html = html.replace('</{tag}>'.format(**locals()), 'my-escape-newlines\n</{tag}>'.format(**locals()))
-        html = html.replace('<{tag} />'.format(**locals()), 'my-escape-newlines\n<{tag} />'.format(**locals()))
+        find1 = '</{tag}>'.format(**locals())
+        find2 = '<{tag} />'.format(**locals())
+        replace = 'my-escape-newlines\n</{tag}>'.format(**locals())
+        html = html.replace(find1, replace)
+        html = html.replace(find2, replace)
 
     # this is too egregious.
     # html = re.sub('<a.*?</a>', '', html)
 
     return html
+
 
 def html_to_text(html):
     '''Extract plain text from HTML'''
@@ -80,10 +92,28 @@ def html_to_text(html):
     text = text.replace('my-escape-newlines', '\n\n')
     return text
 
+
+def is_toc(alpha_line):
+    return ('tableofcontents' in alpha_line
+            # and not much else (except the word 'page' could be on the line)
+            and len(alpha_line) <= len('tableofcontents') + 4)
+
+
+def is_text_line(line):
+    # remove non-alphabetic characters
+    alpha_line = re.sub('[^a-zA-Z]', '', line).lower()
+    # TODO: examine bullet-points in 1-800-FLOWERS
+    return len(alpha_line) > 3 and not(is_toc(alpha_line))
+
+
 def clean_text(text):
     '''Cleans plaintext for semantically insignificant items'''
 
-    ### character replacements
+    if '<PAGE>' in text or '<C>' in text:
+        text = re.sub('\\<PAGE\\>\s*', '\n', text)
+        text = re.sub('\\<C\\>\s*', '\n', text)
+
+    #### character replacements ####
 
     # change windows-newline to linux-newline
     text = re.sub('\r\n', '\n', text)
@@ -99,28 +129,29 @@ def clean_text(text):
 
     # characters that I can't figure out
     for bad_char in ['\x95', '\x97']:
-        text = text.replace(bad_char, "[weird character sam couldn't figure out]")
+        text = text.replace(bad_char, "[character sam couldn't figure out]")
 
     # turn bullet-point + whitespace into newline
     bullets = '([\u25cf\u00b7\u2022\x95])'
     text = re.sub(r'\s+{bullets}\s+'.format(**locals()), ' ', text)
     # TODO: add punctuation if punctuation is not at the end
 
-    ### filter semantic spaces
+    #### filter semantic spaces ####
 
     # turn tab into space
     text = re.sub('\t', ' ', text)
 
     # replace multiple spaces with a single one
-    # multiple spaces is not semantically significant and it complicates regex later
+    # multiple spaces is not semantically significant and it complicates regex
+    # later
     text = re.sub('  +', ' ', text)
 
-    ### filter semantic newlines
+    #### filter semantic newlines ####
 
     # strip leading and trailing spaces
     # these are note semantically significant and it complicates regex later on
     text = re.sub('\n ', '\n', text)
-    text = re.sub(' \n', '\n', text)    
+    text = re.sub(' \n', '\n', text)
 
     # remove single newlines (now that lines are stripped)
     # only double newlines are semantically significant
@@ -129,42 +160,63 @@ def clean_text(text):
     # double newline -> newline (now that single newlines are removed)
     text = re.sub('\n+', '\n', text)
 
+    text = '\n'.join(filter(is_text_line, text.split('\n')))
+
     return text
 
+
 def text_to_items(text, items):
+    '''
+    item can EITHER be
+        - the string heading
+        - a tuple of (pattern, name)
+
+    If the item is a string, then the pattern is the heading and the name is
+    the heading without 'item '.
+    '''
+
     contents = {}
     i = 0
 
+    # TODO: revise this loop
     while i < len(items):
         # find the ith item if it exists
         item = items[i]
+
         if isinstance(item, tuple):
-            item_match = re.search(item[0], text)
+            search_term = item[0]
         else:
-            item_match = re.search(r'^{item}.*?$'.format(**locals()), text, re.MULTILINE | re.IGNORECASE)
+            search_term = r'(?im)^{item}.*?$'.format(**locals())
+        item_match = re.search(search_term, text)
+
         if item_match is None:
             # this item does not exist. skip
             i += 1
             continue
+
         # trim text to start
         text = text[item_match.end():]
 
         # find the next item that exists in the document
         for j in range(i + 1, len(items)):
             next_item = items[j]
+
             if isinstance(next_item, tuple):
-                next_item_match = re.search(next_item[0], text)
+                next_search_term = next_item[0]
             else:
-                next_item_match = re.search(r'^{next_item}'.format(**locals()), text, re.MULTILINE | re.IGNORECASE)
+                next_search_term = r'(?im)^{next_item}'.format(**locals())
+            next_item_match = re.search(next_search_term, text)
+
             if next_item_match is not None:
                 # next item is found
                 break
+
         else:
             # hit the end of the list without finding a next-item
             if isinstance(item, tuple):
                 name = item[1]
             else:
-                name = item.lower().replace("item ", "")
+                name = item
             contents[name] = text
             break
 
@@ -172,25 +224,35 @@ def text_to_items(text, items):
         if isinstance(item, tuple):
             name = item[1]
         else:
-            name = item.lower().replace("item ", "")
+            name = item
         contents[name] = text[:next_item_match.start()]
+
         # trim text
         text = text[next_item_match.start():]
+
         # start at next_item
         i = j
+
     return contents
+
 
 class ParseError(Exception):
     pass
 
+
 def fileinfos_to_disk(fileinfos, path):
-    '''Extracts file_info from SGML_to_fileinfos to the disk in the current directory'''
+    '''Extracts file_info from SGML_to_fileinfos to the disk in the current
+    directory
+    '''
     for file in fileinfos:
         # if file['type'] == '10-K':
         #     print('Main 10k file: ' + file['filename'])
 
+        if 'filename' not in file:
+            file['filename'] = str(random.randint(0, 10000))
         with (path / file['filename']).open('wb') as f:
             f.write(file['text'])
+
 
 def dict_to_disk(dct, path):
     '''Writes all string values to disk in the current working directory'''
@@ -198,3 +260,29 @@ def dict_to_disk(dct, path):
         if isinstance(val, str):
             with (path / key).open('w+') as f:
                 f.write(val)
+
+
+def extras_to_disk(extras, path):
+    '''Writes debug variables from to disk from get_10k_items
+    (tightly coupledd with _10k.py and _8k.py)
+    '''
+
+    if path.exists():
+        for i in itertools.count(2):
+            path2 = path.with_name(path.name + '_' + str(i))
+            if not path2.exists():
+                path = path2
+                break
+    path.mkdir()
+
+    if 'items' in extras:
+        extras['item_str'] = ''
+        for item, doc in extras['items'].items():
+            extras['item_str'] += '\n' + '=' * 79 + '\n' + item + '\n' + doc
+
+    dict_to_disk(extras, path)
+
+    if 'fileinfos' in extras:
+        raw_dir = path / 'raw_form'
+        raw_dir.mkdir()
+        fileinfos_to_disk(extras['fileinfos'], raw_dir)

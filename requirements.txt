@@ -1,0 +1,10 @@
+# bokeh
+nltk
+numpy
+# scipy
+sklearn
+matplotlib
+dask
+# cloudpickle
+s3fs
+paramiko
