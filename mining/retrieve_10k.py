@@ -1,155 +1,98 @@
 from __future__ import print_function
-from os import mkdir
-from os.path import join
 import re
-from mining.cache import download
-from bs4 import BeautifulSoup
+import itertools
+import mining.cache as cache
+import mining.parsing as parsing
 
-def html_to_text(textin, debug):
-    '''Extract real text from HTML, after removing table of contents'''
+def get_risk_factors(path, enable_cache, throw=False):
+    '''Returns the Item 1A section of the 10k form
 
-    textin = textin.decode()
-
-    # replace line breaks within elements with spaces
-    textin = textin.replace('\n', ' ')
-
-    # replace line breaks
-    newline_tags = 'p div tr P DIV TR'.split(' ')
-    for tag in newline_tags:
-        textin = textin.replace('<' + tag, '\n<' + tag)
-
-    # parse as HTML and extract text
-    html_10k = BeautifulSoup(textin, 'html.parser')
-    text = html_10k.text
-
-    # &nbsp -> ' '
-    text = text.replace('\xa0', ' ')
-
-
-    # replace multiple spaces with a single one
-    text = re.sub('  +', ' ', text)
-
+if throw is False, then errors will fail silently and an empty string will be returned
+'''
     try:
-        # remove header
-        parti = re.search('^ ?part i[\. \n]', text, re.MULTILINE | re.IGNORECASE)
-        text = text[parti.end():]
-        
-        # remove table of contents
-        parti = re.search('^ ?part i[\. \n]', text, re.MULTILINE | re.IGNORECASE)
-        if parti:
-            text = text[parti.end():]
+        items = get_10k_items(path, enable_cache)
+        if '1a' in items:
+            return items['1a']
         else:
-            # this means there was no table of contents
-            pass
-    except:
-        if debug:
-            with open('results/10k_error.txt', 'w') as f:
-                f.write(text)
-        raise ParseError('Could not find part 1 (removing table of contents)')
+            raise parsing.ParseError('Item 1A not found')
+    except Exception as exc:
+        if throw:
+            raise exc
+        else:
+            return ''
+
+item_headers = [
+    'Item 1', 'Item 1A', 'Item 1B', 'Item 2', 'Item 3', 'Item 4', 'Item 5',
+    'Item 6', 'Item 7', 'Item 7A', 'Item 8', 'Item 9', 'Item 9A', 'Item 9B',
+    'Item 10', 'Item 11', 'Item 12', 'Item 13', 'Item 14', 'Item 15',
+    'Signatures']
+
+def get_10k_items(edgar_path, enable_cache, debug_path=None):
+    '''Returns a dict of items from the 10-K
+
+The keys will be a lower-cased item header without the word 'item', such as
+'1a' or '5'.
+If path is not None, it should be the pathlib.Path of an extant directory.
+Debug variables will be written to that path
+'''
+    try:
+        sgml = cache.download(edgar_path, enable_cache)
+        fileinfos = parsing.SGML_to_fileinfos(sgml)
+        form_10k = parsing.find_form(fileinfos, '10-K')
+        if parsing.is_html(form_10k):
+            html = form_10k
+            clean_html = parsing.clean_html(html)
+            raw_text = parsing.html_to_text(clean_html)
+        else:
+            raw_text = form_10k
+        clean_text = parsing.clean_text(raw_text)
+        main_text = remove_header(clean_text)
+        items = parsing.text_to_items(main_text, item_headers)
+    finally:
+        if debug_path is not None:
+            extras_to_disk(locals(), debug_path)
+    return items
+
+
+def remove_header(text):
+    # text is header, (optional) table of contents, and body
+    # table of contents starts with "Part I"
+    # body starts with "Part I"
+
+    ### trim header
+    # note that the [\. \n] is necessary otherwise the regex will match "part ii"
+    # note that the begining of line anchor is necessary because we don't want
+    # it to match "part i" in the middle of a paragraph
+    parti = re.search('^part i[\\. \n]', text, re.MULTILINE | re.IGNORECASE)
+    if parti is None:
+        raise parsing.ParseError('Could not find "Part I" to remove header')
+    text = text[parti.end():]
+
+    ### remove table of contents, if it exists
+    parti = re.search('^part i[\\. \n]', text, re.MULTILINE | re.IGNORECASE)
+    if parti:
+        text = text[parti.end():]
+    else:
+        # this means there was no table of contents
+        pass
     return text
 
-items = ['Item 1', 'Item 1A', 'Item 1B', 'Item 2', 'Item 3', 'Item 4', 'Item 5', 'Item 6', 'Item 7', 'Item 7A', 'Item 8', 'Item 9', 'Item 9A', 'Item 9B', 'Item 10', 'Item 11', 'Item 12', 'Item 13', 'Item 14', 'Item 15', 'Signatures']
-names = '1 1A 1B 2 3 4 5 6 7 7A 8 9 9A 9B 10 11 12 13 14 15'.split(' ')
+def extras_to_disk(extras, path):
+    '''Writes debug variables from to disk from get_10k_items'''
 
-def text_to_items(text, debug):
-    contents = {}
-    for name, item, next_item in zip(names, items[:-1], items[1:]):
+    if path.exists():
+        for i in itertools.count(2):
+            path = path.with_name(path.name + '_' + str(i))
+            if not path.exists():
+                break
+    path.mkdir()
 
-        # search for text between {item} and {next_item}
-        item_pattern = re.compile(r'^\s*({item}.*?)$(.*?)(?=^\s*{next_item})'.format(**locals()), re.DOTALL | re.MULTILINE | re.IGNORECASE)
-        match = item_pattern.search(text)
+    if 'items' in extras:
+        items_list = [key + '\n----\n' + val for key, val in extras['items'].items()]
+        extras['items_str'] = '\n----\n'.join(items_list)
+    parsing.dict_to_disk(extras, path)
 
-        # print a message on failure
-        if not match:
-            if debug:
-                with open('results/10k_error_{item}.txt'.format(**locals()), 'w') as f:
-                    f.write(text)
-                print('Could not find {item}'.format(**locals()))
-        else:
-
-            # store contents of match
-            contents[name] = match.group(2)
-
-            # chop text after match, so that future searches only search after this point
-            text = text[match.end():]
-    return contents
-
-def parse_10k(files, debug=True):
-    '''Inputs a list of dicts (one dict for each file) aad returns a dict mapping from names (declared above) to strings of content'''
-    for file_info in files:
-        if file_info['type'] == '10-K':
-            break
-    else:
-        raise ParseError('Cannot find the 10K')
-
-    text = html_to_text(file_info['text'], debug)
-    if debug:
-        print('Normalized text...')
-    return text_to_items(text, debug)
-
-
-def extract_to_disk(directory, files):
-    '''Extracts all files in the list of dicts (one for each file) into the directory for manual examination'''
-    mkdir(directory)
-    for file in files:
-        if file['type'] == '10-K':
-            print(file['filename'])
-        try:
-            dfname = join(directory, file['filename'])
-            with open(dfname, 'wb') as f:
-                f.write(file['text'])
-        except:
-            print(file.keys())
-
-def SGML_to_files(sgml_contents):
-    '''Inputs the downloaded SGML and outputs a list of dicts (one dict for each file)
-
-    Each document described in the SGML gets converted to a dict of all of its attributes, including the 'text', which has actual text of a document'''
-    doc_pattern = re.compile(b'<DOCUMENT>(.*?)</DOCUMENT>', re.DOTALL)
-    files = []
-    for doc_match in doc_pattern.finditer(sgml_contents):
-        doc_text = doc_match.group(1)
-        files.append({})
-
-        text_pattern = re.compile(b'(.*)<TEXT>(.*?)</TEXT>(.*)', re.DOTALL)
-        text_match = text_pattern.search(doc_text)
-        files[-1]['text'] = text_match.group(2)
-        rest_text = text_match.group(1) + text_match.group(3)
-
-        # Match both forms
-        # <TAG>stuff
-        # <OTHERTAG>more stuff
-        # and
-        # <TAG>stuff</TAG>
-        # <OTHERTAG>more stuff</OTHERTAG>
-        tagcontent_pattern = re.compile(b'<(.*?)>(.*?)[\n<]', re.DOTALL)
-        for tagcontent in tagcontent_pattern.finditer(rest_text):
-            tagname = tagcontent.group(1).lower().decode()
-            content = tagcontent.group(2).decode()
-            files[-1][tagname] = content
-    return files
-
-def get_risk_factors(path, debug=True):
-    sgml = download(path)
-    files = SGML_to_files(sgml.read())
-    sgml.close()
-    # print('Parsed SGML document')
-    # try:
-    #     extract_to_disk(path.split('/')[2], files)
-    # except:
-    #     pass
-
-    risk_factors = parse_10k(files, debug)
-    if '1A' in risk_factors:
-        return risk_factors['1A']
-    else:
-        raise ParseError('Item 1A not found')
-
-class ParseError(Exception):
-    pass
-
-# Rox
-# OpenMPI
-# RabitMQ
-
-# 46 604
+    if 'fileinfos' in extras:
+        raw_dir = path / 'raw_form'
+        raw_dir.mkdir()
+        parsing.fileinfos_to_disk(extras['fileinfos'], raw_dir)
