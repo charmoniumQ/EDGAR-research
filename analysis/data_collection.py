@@ -5,6 +5,7 @@ from mining.retrieve_10k import get_risk_factors
 from util.new_directory import new_directory
 from util.stem import stem
 import itertools
+import sys
 
 '''
 This script downloads and parses risk factors
@@ -33,10 +34,16 @@ qtr: {qtr}
 '''
 Make database with Filing_Date, Year, Qtr, Company ID, hasRiskFactors
 '''
+if len(sys.argv) == 3:
+	y1 = (int)(sys.argv[1])
+	y2 = (int)(sys.argv[2])
+else:
+	y1 = 2009
+	y2 = 2017
 header = 'date_filed,year,qtr,cik,name,has_valid_rf, number_of_rf'
 with (directory/"rf_report.csv").open('w+', encoding='utf-8') as rf_report:
     rf_report.write(header + '\n')
-    for year in range(2006, 2018):
+    for year in range(y1, y2):
         for qtr in range(1, 5):
             print('YEAR', year, 'QTR', qtr)
             for record in get_index(year, qtr, enable_cache=False):
