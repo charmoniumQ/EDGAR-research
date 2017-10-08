@@ -7,6 +7,14 @@ from . import word
 
 
 def stem_text(text_):
+    '''Inputs text outputs a list of list of list of lists of stems
+
+Each section is a list of paragraphs
+Each paragraph is a list of sentences
+Each sentence is a list of clauses
+Each clause is a list of words
+Each word gets turned into a stem
+'''
     # TODO: test lazy vs eager evaluation here
     # TODO: test lol.lmap against nested for-loops
     paragraphs_ = text.to_paragraphs(text_)

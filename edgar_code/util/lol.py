@@ -25,6 +25,7 @@ def lmap(f, elem, level):
 
 
 def flatten(lst):
+    '''Turns a list of list of list...(etc.) into just a flat list'''
     if (hasattr(lst, '__next__') or hasattr(lst, '__iter__')) \
        and not isinstance(lst, str):
         for e in lst:

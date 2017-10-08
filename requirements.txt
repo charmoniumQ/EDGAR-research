@@ -5,6 +5,7 @@ numpy
 sklearn
 matplotlib
 dask
-# cloudpickle
+dask[bag]
 s3fs
 paramiko
+toolz
