@@ -1,4 +1,3 @@
-from __future__ import print_function
 import re
 import datetime
 import collections
@@ -7,21 +6,40 @@ import zipfile
 import io
 import itertools
 import operator
+from edgar_code.cloud import KVBag
+import dask.bag
+import toolz
 
 
-Record = collections.namedtuple('Record', [
+Index = collections.namedtuple('Index', [
     'form_type', 'company_name', 'CIK', 'date_filed', 'url', 'year', 'qtr'
 ])
 
 
-def download(year, qtr, form_type):
-    lines = download_(year, qtr)
+@toolz.curry
+def download_many_indexes(years, form_type):
+    '''Returns an bag of Record-types, but pulls from all quaters of the given
+years
+
+years: (list of ints) what years to pull from
+'''
+    return KVBag(dask.bag.concat([
+        download_indexes(year, qtr, form_type)
+        for year in years
+        for qtr in range(1, 5)]))
+
+
+@toolz.curry
+def download_indexes(year, qtr, form_type):
+    '''Returns an bag of Record-types'''
+    lines = download_raw(year, qtr)
     col_names = parse_header(lines)
-    records = parse_body(year, qtr, lines, col_names)
-    return filter_form_type(records, form_type)
+    indexes = parse_body(year, qtr, lines, col_names)
+    relevant_indexes = filter_form_type(indexes, form_type)
+    return KVBag(dask.bag.from_sequence(relevant_indexes))
 
 
-def download_(year, qtr):
+def download_raw(year, qtr):
     index_type = 'form'
     url = 'https://www.sec.gov/Archives/edgar/full-index/{year}/QTR{qtr}/{index_type}.zip'.format(**locals()) # noqa
     compressed_file = urllib.request.urlopen(url).read()
@@ -71,14 +89,17 @@ def parse_body(year, qtr, lines, col_names):
                 line_dict['Date Filed'], '%Y-%m-%d').date(),
             'url': 'https://www.sec.gov/Archives/' + line_dict['Filename'],
         }
-        yield Record(**out)
+        yield Index(**out)
 
 
 def filter_form_type(records, this_form_type):
-    form_types = itertools.groupby(records, operator.attrgetter('form_type'))
-    for form_type, records in form_types:
-        if this_form_type == form_type:
-            yield from records
+    for record in records:
+        if record.form_type == this_form_type:
+            yield record
+#     form_types = itertools.groupby(records, operator.attrgetter('form_type'))
+#     for form_type, records in form_types:
+#         if this_form_type == form_type:
+#             yield from records
 
 
 def split(line):
@@ -108,6 +129,3 @@ def split(line):
         elems.insert(1, '')
 
     return elems
-
-
-__all__ = ['download']

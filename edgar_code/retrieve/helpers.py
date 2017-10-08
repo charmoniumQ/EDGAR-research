@@ -1,4 +1,3 @@
-from __future__ import print_function
 import random
 from six.moves.html_parser import HTMLParser
 # from bs4 import BeautifulSoup
@@ -131,7 +130,7 @@ def clean_text(text):
     for bad_char in ['\x95', '\x97']:
         text = text.replace(bad_char, "[character sam couldn't figure out]")
 
-    # turn bullet-point + whitespace into newline
+    # turn bullet-point + whitespace into space
     bullets = '([\u25cf\u00b7\u2022\x95])'
     text = re.sub(r'\s+{bullets}\s+'.format(**locals()), ' ', text)
     # TODO: add punctuation if punctuation is not at the end

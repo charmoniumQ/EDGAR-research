@@ -1,5 +1,21 @@
 import itertools
 from pathlib import Path
+import re
+
+
+def sanitize_fname(fname):
+    return re.sub(r'[^a-zA-Z\.-_]', '', fname)
+
+
+def unused_fname(dire, fname):
+    def candidates():
+        yield dire / fname  # try just dire/fname
+        for n in itertools.count(1):
+            yield dire / f'{fname}_{n}'  # otherwise add n
+
+    for try_fname in candidates():
+        if not try_fname.exists():
+            return try_fname
 
 RESULTS = Path('results')
 
@@ -8,16 +24,10 @@ def new_directory():
         RESULTS.mkdir()
 
     # count down from 99
-    for i in range(99, -1, -1):
+    for i in itertools.chain(range(99, -1, -1), itertools.count(100)):
         directory = RESULTS / 'result_{:02d}'.format(i)
         if not directory.exists():
             break
-    else:
-        # count up from 100 if 0-99 already taken
-        for i in itertools.count(100):
-            directory = RESULTS / 'result_{:02d}'.format(i)
-            if not directory.exists():
-                break
     directory.mkdir()
     return directory
 

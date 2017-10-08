@@ -1,10 +1,7 @@
 from __future__ import print_function
 import re
-from mining.retrieve_index import get_index
-from mining.retrieve_10k import get_risk_factors
-from util.new_directory import new_directory
-from util.stem import stem
-import itertools
+from ..util.new_directory import new_directory
+from ..retrieve.main import download_all
 import sys
 
 '''
@@ -46,19 +43,18 @@ with (directory/"rf_report.csv").open('w+', encoding='utf-8') as rf_report:
     for year in range(y1, y2):
         for qtr in range(1, 5):
             print('YEAR', year, 'QTR', qtr)
-            for record in get_index(year, qtr, enable_cache=True):
-            # for record in itertools.islice(get_index(year, qtr, enable_cache=True), None, 100):
+            for record, rf in download_all(year, qtr, '10-K', 'Item 1A').collect():
                 name = record['Company Name']
                 # TODO: lint
                 # TODO: move this to new_directory
-                import re
                 name = re.sub('[^a-zA-Z0-9]', '_', name)
                 file_name = '{name}.txt'.format(**locals())
-                rf = get_risk_factors(record['Filename'], enable_cache=False, throw=False)
-                valid_rf = len(rf) > 1000
-                paragraphs = list(filter(is_paragraph, rf.split('\n')))
-                # print(paragraphs)
-                line = ','.join([str(x) for x in [record['Date Filed'], year, qtr, record['CIK'], name,
+                if rf is None:
+                    valid_rf = False
+                else:
+                    paragraphs = list(filter(is_paragraph, rf.split('\n')))
+                line = ','.join([str(x) for x in [record['Date Filed'], year,
+                                                  qtr, record['CIK'], name,
                                                   valid_rf, len(paragraphs)]])
                 rf_report.write(line + '\n')
                 # print(line)
