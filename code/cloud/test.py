@@ -49,7 +49,10 @@ cluster_conf = {
 }
 
 
+def main():
+    cluster = Cluster(**cluster_conf)
+    with cluster.provisioned(name='solitary_flower', load=True, save=True):
+        IPython.embed()
 
-cluster = Cluster(**cluster_conf)
-with cluster.provisioned(name='solitary_flower', load=True, save=True):
-    IPython.embed()
+if __name__ == '__main__':
+    main()
