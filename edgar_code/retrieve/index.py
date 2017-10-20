@@ -4,8 +4,6 @@ import collections
 import urllib.request
 import zipfile
 import io
-import itertools
-import operator
 from edgar_code.cloud import KVBag
 import dask.bag
 import toolz

@@ -48,6 +48,7 @@ Debug variables will be written to a subdirectory that path
         if debug_dir is not None:
             subdir_basename = sanitize_fname(index.company_name)
             subdir = unused_fname(debug_dir, subdir_basename)
+            items['path'] = subdir
             helpers.extras_to_disk(locals(), subdir)
     return items
 

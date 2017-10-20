@@ -9,3 +9,4 @@ dask[bag]
 s3fs
 paramiko
 toolz
+pyyaml
