@@ -1,8 +1,0 @@
-For API access in programs:
-Access key ID: AKIAJPZCZTI3YMMFT4TA
-Secret access key: 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
-
-For huamn access in browser:
-Sign in portal: https://039291202393.signin.aws.amazon.com/console
-User: edgar_user
-Password: y'wv=}MVPG]O
