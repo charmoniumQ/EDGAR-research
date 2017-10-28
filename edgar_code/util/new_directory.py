@@ -56,3 +56,8 @@ def find_file(filename, paths):
 
 def rand_name(n):
     return ''.join(random.choice(string.ascii_lowercase) for _ in range(n))
+
+
+def rand_names(n):
+    while True:
+        yield ''.join(random.choice(string.ascii_lowercase) for _ in range(n))

@@ -97,3 +97,18 @@ if __name__ == '__main__':
     f.clear()
 
     assert calls == [7, 2, 7]
+
+if False:
+    import yaml
+
+    with Path('/home/sam/Box Sync/config.yaml').open('r') as f:
+        config = yaml.load(f)
+
+    with Path('/home/sam/Box Sync/credentials.yaml').open('r') as f:
+        credentials = yaml.load(f)
+
+    s3fs = s3fs_client.S3FileSystem(
+        key=credentials['aws']['cache']['access_key_id'],
+        secret=credentials['aws']['cache']['secret_access_key'],
+    )
+    bucket = config['bucket']
