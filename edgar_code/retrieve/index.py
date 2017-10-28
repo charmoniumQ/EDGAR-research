@@ -6,7 +6,6 @@ import zipfile
 import io
 from edgar_code.cloud import KVBag
 import dask.bag
-import toolz
 
 
 Index = collections.namedtuple('Index', [
@@ -14,30 +13,18 @@ Index = collections.namedtuple('Index', [
 ])
 
 
-@toolz.curry
-def download_many_indexes(years, form_type):
-    '''Returns an bag of Record-types, but pulls from all quaters of the given
-years
-
-years: (list of ints) what years to pull from
-'''
-    return KVBag(dask.bag.concat([
-        download_indexes(year, qtr, form_type)
-        for year in years
-        for qtr in range(1, 5)]))
-
-
-@toolz.curry
-def download_indexes(year, qtr, form_type):
+def download_indexes(form_type, year, qtr):
     '''Returns an bag of Record-types'''
-    lines = download_raw(year, qtr)
+    lines = download_index_lines(year, qtr)
     col_names = parse_header(lines)
     indexes = parse_body(year, qtr, lines, col_names)
     relevant_indexes = filter_form_type(indexes, form_type)
-    return KVBag(dask.bag.from_sequence(relevant_indexes))
+    bag = dask.bag.from_sequence(relevant_indexes)
+    kvbag = KVBag.from_keys(bag)
+    return kvbag
 
 
-def download_raw(year, qtr):
+def download_index_lines(year, qtr):
     index_type = 'form'
     url = 'https://www.sec.gov/Archives/edgar/full-index/{year}/QTR{qtr}/{index_type}.zip'.format(**locals()) # noqa
     compressed_file = urllib.request.urlopen(url).read()

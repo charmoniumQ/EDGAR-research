@@ -5,9 +5,6 @@ class KVBag(dask.bag.Bag):
     def __init__(self, bag):
         self.bag = bag
 
-    def key_to_value(self, func):
-        return self.map(lambda key: (key, func(key)))
-
     def map_values(self, func):
         return self.map(lambda pair: (pair[0], func(pair[1])))
 
@@ -22,7 +19,21 @@ class KVBag(dask.bag.Bag):
     def map(self, func):
         return KVBag(self.bag.map(func))
 
+    # public constructors. use thes insead of __init__
+
+    @classmethod
+    def from_keys(Cls, bag):
+        return Cls(bag.map(lambda key: (key, key)))
+
+    @classmethod
+    def from_pairs(Cls, bag):
+        return Cls(bag)
+
     # inherit rest
 
     def __getattr__(self, attri):
         return getattr(self.bag, attri)
+
+# Cache intermediate steps
+# Cascading updates
+# Skip precomputed work

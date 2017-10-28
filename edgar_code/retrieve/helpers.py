@@ -164,7 +164,7 @@ def clean_text(text):
     return text
 
 
-def text_to_items(text, items):
+def main_text_to_form_items(text, items):
     '''
     item can EITHER be
         - the string heading
@@ -239,49 +239,26 @@ class ParseError(Exception):
     pass
 
 
-def fileinfos_to_disk(fileinfos, path):
-    '''Extracts file_info from SGML_to_fileinfos to the disk in the current
-    directory
-    '''
-    for file in fileinfos:
-        # if file['type'] == '10-K':
-        #     print('Main 10k file: ' + file['filename'])
+def remove_header(text):
+    # text is header, (optional) table of contents, and body
+    # table of contents starts with "Part I"
+    # body starts with "Part I"
 
-        if 'filename' not in file:
-            file['filename'] = str(random.randint(0, 10000))
-        with (path / file['filename']).open('wb') as f:
-            f.write(file['text'])
+    # ====== trim header ====
+    # note that the [\\. \n] is necessary otherwise the regex will match
+    # "part ii"
+    # note that the begining of line anchor is necessary because we don't want
+    # it to match "part i" in the middle of a paragraph
+    parti = re.search('^part i[\\. \n]', text, re.MULTILINE | re.IGNORECASE)
+    if parti is None:
+        raise helpers.ParseError('Could not find "Part I" to remove header')
+    text = text[parti.end():]
 
-
-def dict_to_disk(dct, path):
-    '''Writes all string values to disk in the current working directory'''
-    for key, val in dct.items():
-        if isinstance(val, str):
-            with (path / key).open('w+') as f:
-                f.write(val)
-
-
-def extras_to_disk(extras, path):
-    '''Writes debug variables from to disk from get_10k_items
-    (tightly coupledd with _10k.py and _8k.py)
-    '''
-
-    if path.exists():
-        for i in itertools.count(2):
-            path2 = path.with_name(path.name + '_' + str(i))
-            if not path2.exists():
-                path = path2
-                break
-    path.mkdir()
-
-    if 'items' in extras:
-        extras['item_str'] = ''
-        for item, doc in extras['items'].items():
-            extras['item_str'] += '\n' + '=' * 79 + '\n' + item + '\n' + doc
-
-    dict_to_disk(extras, path)
-
-    if 'fileinfos' in extras:
-        raw_dir = path / 'raw_form'
-        raw_dir.mkdir()
-        fileinfos_to_disk(extras['fileinfos'], raw_dir)
+    # ====== remove table of contents, if it exists ====
+    parti = re.search('^part i[\\. \n]', text, re.MULTILINE | re.IGNORECASE)
+    if parti:
+        text = text[parti.end():]
+    else:
+        # this means there was no table of contents
+        pass
+    return text

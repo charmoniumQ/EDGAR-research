@@ -1,2 +1,1 @@
-from .index import download_many_indexes, download_indexes
-from .rf import indexes_to_rfs
+from .combined import rfs_for, index_to_rf, download_indexes
