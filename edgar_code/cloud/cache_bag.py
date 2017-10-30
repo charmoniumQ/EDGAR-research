@@ -1,114 +1,41 @@
-import pickle
-import random
-import string
-import toolz
-import s3fs
+import sys
+sys.path.insert(0, '/home/sam/Documents/src/dask')
 import dask.bag
-from ..util.cache import Cache, FileBackedCache
+import pickle
+from ..util import rand_names
+import toolz
+import base64
 
 
-class BagCache(FileBackedCache):
-    '''FileBackedCache, specialized for Dask bags'''
+class CacheBag(object):
+    def __init__(self, bag):
+        self.bag = bag
 
-    def __init__(self, bucket, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.bucket = bucket
+    def put(self, dir_):
+        for key in rand_names(20):
+            path = dir_ / key
+            if not path.exists():
+                break
+        path = str(path / '*.json.gz')
+        print(f'.to_textfiles({path!r}, encoding=None, storage_options={dir_.storage_options()})') # mee
+        (
+            self.bag
+            .map(pickle.dumps)
+            .map(toolz.partial(base64.a85encode, foldspaces=True, wrapcol=0))
+            .to_textfiles(path, encoding=None, storage_options=dir_.storage_options()))
+        return path
 
-    def __setitem__(self, key, obj):
-        if isinstance(obj, dask.bag.Bag):
-            val = ('bag', dump_bag(self.bucket, obj))
+    @classmethod
+    def get(Cls, path, dir_):
+        return Cls(
+            dask.bag.read_text(path, encoding=None, storage_options=dir_.storage_options())
+            .map(toolz.partial(base64.a85decode, foldspaces=True))
+            .map(pickle.loads)
+        )
+
+    def __getattr__(self, attr):
+        f = getattr(self.bag, attr)
+        if callable(f):
+            return lambda *args, **kwargs: CacheBag(f(*args, **kwargs))
         else:
-            val = ('obj', obj)
-        super().__setitem__(key, val)
-
-    def __getitem__(self, key):
-        val = super().__getitem__(key)
-        if val[0] == 'bag':
-            parition_urls = val[1]
-            obj = load_bag(self.bucket, parition_urls)
-        else:
-            obj = val[1]
-        return obj
-
-    def clear(self):
-        fs = s3fs.S3FileSystem()
-        for key, val in self.data.items():
-            if val[0] == 'bag':
-                partition_urls = val[1]
-                for partition in partition_urls:
-                    fs.rm(partition)
-        super().clear()
-
-
-def dump_bag(bucket, bag):
-    fs = s3fs.S3FileSystem()
-    partition_urls = (
-        bag
-        .map_partitions(dump_partition(fs, bucket))
-        .compute()
-    )
-    return partition_urls
-
-
-@toolz.curry
-def dump_partition(fs, bucket, partition):
-    name = random_string()
-    path = 's3://{bucket}/{name}'.format(**locals())
-    with fs.open(path, 'wb') as f:
-        pickle.dump(partition, f)
-    return path
-
-
-def load_bag(bucket, partition_urls):
-    fs = s3fs.S3FileSystem()
-    return (
-        dask.bag.from_sequence(partition_urls, partition_size=1)
-        .map(load_partition(fs))
-        .flatten()
-    )
-
-
-@toolz.curry
-def load_partition(fs, path):
-    with fs.open(path, 'rb') as f:
-        return pickle.load(f)
-
-
-def random_string(n=20):
-    name = ''.join(random.sample(string.ascii_lowercase, n))
-    return name
-
-
-if __name__ == '__main__':
-    calls = []
-
-    @Cache(BagCache('jlndhfkiab-edgar-data', 'test'))
-    def f(a):
-        calls.append(a)
-        return dask.bag.range(a, npartitions=2)
-
-    f.clear()
-    f(7).compute() # miss
-    f(2).compute() # miss
-    f(7).compute()
-    f(2).compute()
-    f.clear()
-    f(7).compute() # miss
-    f.clear()
-
-    assert calls == [7, 2, 7]
-
-if False:
-    import yaml
-
-    with Path('/home/sam/Box Sync/config.yaml').open('r') as f:
-        config = yaml.load(f)
-
-    with Path('/home/sam/Box Sync/credentials.yaml').open('r') as f:
-        credentials = yaml.load(f)
-
-    s3fs = s3fs_client.S3FileSystem(
-        key=credentials['aws']['cache']['access_key_id'],
-        secret=credentials['aws']['cache']['secret_access_key'],
-    )
-    bucket = config['bucket']
+            return f

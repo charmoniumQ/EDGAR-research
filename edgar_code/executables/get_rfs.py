@@ -11,14 +11,14 @@ def pick_n(indexes, n):
     return KVBag(dask.bag.from_sequence(random.sample(indexes.compute(), n)))
 
 
-def main(year, qtr, filterer, dir):
+def main(year, qtr, filterer, dir_):
     indexes = download_indexes('10-K', year, qtr)
     indexes = filterer(indexes)
     rfs = indexes.map_values(index_to_rf)
     for record, rf in rfs.compute():
         print(record)
         fname = sanitize_fname(record.company_name) + '_10k.txt'
-        with (dir / fname).open('w') as f:
+        with (dir_ / fname).open('w') as f:
             f.write(rf)
 
 
@@ -26,6 +26,6 @@ if __name__ == '__main__':
     year = 2008
     qtr = 2
     filterer = pick_n(n=1)
-    dir = new_directory()
-    main(year, qtr, filterer, dir)
-    print('results in', dir)
+    dir_ = new_directory()
+    print('results in', dir_)
+    main(year, qtr, filterer, dir_)

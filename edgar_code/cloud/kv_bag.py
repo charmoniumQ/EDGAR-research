@@ -1,7 +1,7 @@
-import dask.bag
+from .cache_bag import CacheBag
 
 
-class KVBag(dask.bag.Bag):
+class KVBag(CacheBag):
     def __init__(self, bag):
         self.bag = bag
 

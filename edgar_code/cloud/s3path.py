@@ -1,5 +1,4 @@
-import s3fs as s3fs_client
-
+from pathlib import PurePath
 
 class S3Path(object):
     def __init__(self, bucket, path, s3fs):
@@ -28,7 +27,7 @@ class S3Path(object):
     def __truediv__(self, subdir):
         return S3Path(self.bucket, self.path / subdir, self.s3fs)
 
-    def mkdir(self, parents=False):
+    def mkdir(self, parents=False, exist_ok=False):
         # s3 keystore does not require the 'parent directory' key to exist first
         # self.s3fs.mkdir(self.bucket_path)
         pass
@@ -37,5 +36,10 @@ class S3Path(object):
         self.s3fs.rm(self.bucket_path)
 
     def __repr__(self):
-        return 's3://{self.bucket}{self.path}'.format(**locals())
+        return 's3://{self.bucket}{self.path!s}'.format(**locals())
 
+    def storage_options(self):
+        if self.s3fs.key is not None and self.s3fs.secret is not None:
+            return dict(key=self.s3fs.key, secret=self.s3fs.secret)
+        else:
+            raise RuntimeError('Now parameters given')

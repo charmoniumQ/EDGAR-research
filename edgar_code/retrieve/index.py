@@ -5,6 +5,8 @@ import urllib.request
 import zipfile
 import io
 from edgar_code.cloud import KVBag
+import sys
+sys.path.insert(0, '/home/sam/Documents/src/dask')
 import dask.bag
 
 

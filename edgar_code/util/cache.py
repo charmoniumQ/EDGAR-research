@@ -1,10 +1,10 @@
 import collections
-from pathlib import Path, PurePath
+from pathlib import Path
 import shutil
 import toolz
 import pickle
 import os
-from .new_directory import rand_names
+from .fs_util import rand_names
 
 
 class Cache(object):
@@ -69,7 +69,11 @@ class Cache(object):
                       .format(key=repr((args, kwargs)), name=self.name))
         else:
             res = self.function(*args, **kwargs)
-            self.index[key] = self.store.put(res)
+            try: # mee
+                self.index[key] = self.store.put(res)
+            except Exception as e: # mee
+                print('key:', key) # mee
+                raise e # mee
             if self.miss_msg:
                 print(self.miss_msg
                       .format(key=repr((args, kwargs)), name=self.name))
@@ -130,9 +134,12 @@ class PickleStore(object):
     Good for large objects.
     Stores at ./${PARENT_DIR}/${FUNCTION_NAME}/${RAND_STRING}'''
 
-    def __init__(self, parent_dir, gen_key):
+    def __init__(self, parent_dir, gen_key=None):
         self.parent_dir_ = pathify(parent_dir)
-        self.gen_key = gen_key
+        if gen_key is None:
+            self.gen_key = toolz.partial(rand_names, 20)
+        else:
+            self.gen_key = gen_key
 
     def set_name(self, name):
         self.name = name
@@ -159,6 +166,7 @@ class PickleStore(object):
         fname = self.dir_ / key
         if fname.exists():
             if hasattr(fname, 'remove'):
+                # to make S3Paths work here
                 fname.remove()
             else:
                 os.remove(str(fname))
@@ -166,6 +174,7 @@ class PickleStore(object):
     def clear(self):
         if self.dir_.exists():
             if hasattr(self.dir_, 'remove'):
+                # to make S3Paths work here
                 self.dir_.remove()
             else:
                 shutil.rmtree(str(self.dir_))
@@ -174,8 +183,8 @@ class PickleStore(object):
 class CustomStore(PickleStore):
     '''Like PickleStore, but overridable.
 
-    Classes wishing to use this should provide instance-method __put__ and
-    class-method __get__. These will be called with the args and kwargs in
+    Classes wishing to use this should provide instance-method put and
+    class-method get. These will be called with the args and kwargs in
     this class's __init__.'''
 
     def __init__(self, path, gen_key, *args, **kwargs):
@@ -184,10 +193,14 @@ class CustomStore(PickleStore):
         self.kwargs = kwargs
 
     def put(self, obj):
-        if hasattr(obj, '__put__'):
+        if hasattr(obj, 'put'):
             # the key[0] will be type(obj), so that we can call
-            # key[0].__get__ later
-            key = (type(obj), obj.__put__(*self.args, **self.kwargs))
+            # key[0].get later
+            try: # mee
+                key = (type(obj), obj.put(*self.args, **self.kwargs))
+            except Exception as e: # mee
+                print('name:', self.name) # mee
+                raise e # mee
         else:
             # fall back to PickleStore
             # the key[0] will indicate be None if we used pickle
@@ -196,8 +209,8 @@ class CustomStore(PickleStore):
 
     def get(self, key):
         if key[0] is not None:
-            # note that __get__  should be a classmethod
-            return key[0].__get__(key[1], *self.args, **self.kwargs)
+            # note that get  should be a classmethod
+            return key[0].get(key[1], *self.args, **self.kwargs)
         else:
             return super().get(key[1])
 
@@ -242,6 +255,7 @@ class IndexInFile(collections.UserDict):
         super().clear()
         if self.fname.exists():
             if hasattr(self.fname, 'remove'):
+                # to make S3Paths work here
                 self.fname.remove()
             else:
                 os.remove(str(self.fname))
@@ -286,7 +300,7 @@ if __name__ == '__main__':
         calls.append(x)
         return x**2
 
-    @Cache(IndexInFile('cache2/'), CustomStore('cache2/', toolz.partial(rand_names, 20)))
+    @Cache(IndexInFile('cache2/'), CustomStore('cache2/', None))
     def square3(x):
         calls.append(x)
         return x**2

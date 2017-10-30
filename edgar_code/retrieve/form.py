@@ -23,7 +23,10 @@ def form_text_to_main_text(form_type, form_raw):
     clean_text = helpers.clean_text(raw_text)
     if form_type == '10-K':
         # special case, 10-K forms contain table of contents
-        main_text = helpers.remove_header(clean_text)
+        try:
+            main_text = helpers.remove_header(clean_text)
+        except:
+            main_text = None
     else:
         main_text = clean_text
     return main_text
@@ -31,7 +34,10 @@ def form_text_to_main_text(form_type, form_raw):
 
 @toolz.curry
 def main_text_to_form_items(form_type, main_text):
-    return helpers.main_text_to_form_items(main_text, item_headers[form_type])
+    if main_text is not None:
+        return helpers.main_text_to_form_items(main_text, item_headers[form_type])
+    else:
+        return {}
 
 
 item_headers = {
