@@ -69,11 +69,7 @@ class Cache(object):
                       .format(key=repr((args, kwargs)), name=self.name))
         else:
             res = self.function(*args, **kwargs)
-            try: # mee
-                self.index[key] = self.store.put(res)
-            except Exception as e: # mee
-                print('key:', key) # mee
-                raise e # mee
+            self.index[key] = self.store.put(res)
             if self.miss_msg:
                 print(self.miss_msg
                       .format(key=repr((args, kwargs)), name=self.name))
@@ -196,11 +192,7 @@ class CustomStore(PickleStore):
         if hasattr(obj, 'put'):
             # the key[0] will be type(obj), so that we can call
             # key[0].get later
-            try: # mee
-                key = (type(obj), obj.put(*self.args, **self.kwargs))
-            except Exception as e: # mee
-                print('name:', self.name) # mee
-                raise e # mee
+            key = (type(obj), obj.put(*self.args, **self.kwargs))
         else:
             # fall back to PickleStore
             # the key[0] will indicate be None if we used pickle

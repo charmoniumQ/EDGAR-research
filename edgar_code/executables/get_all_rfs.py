@@ -8,15 +8,16 @@ def main(year, qtr, dir_):
     pbar = ProgressBar()
     pbar.register()
     for record, rf in rfs_for(year, qtr).compute():
-        print(record.company_name)
-        starting_fname = unusanitize_fname(record.company_name)
-        fname = unused_fname(dir_, starting_fname)
+        starting_fname = sanitize_fname(record.company_name)
+        fname = unused_fname(dir_, starting_fname).with_suffix('.txt')
+        print('{record.company_name} -> {fname.name}'.format(**locals()))
         with fname.open('w', encoding='utf-8') as f:
-            record_ = dict(**record._asdict())
-            record_['date_filed'] = str(record_['date_filed'])
-            f.write(json.dumps(dict(**record._asdict())))
-            f.write('\n')
-            f.write(rf)
+            if rf:
+                record_ = dict(**record._asdict())
+                record_['date_filed'] = str(record_['date_filed'])
+                f.write(json.dumps(record_))
+                f.write('\n')
+                f.write(rf)
 
 
 if __name__ == '__main__':

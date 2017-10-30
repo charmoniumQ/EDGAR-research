@@ -17,7 +17,6 @@ class CacheBag(object):
             if not path.exists():
                 break
         path = str(path / '*.json.gz')
-        print(f'.to_textfiles({path!r}, encoding=None, storage_options={dir_.storage_options()})') # mee
         (
             self.bag
             .map(pickle.dumps)
