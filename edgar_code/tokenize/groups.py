@@ -6,7 +6,7 @@ def get_heading1(paragraph):
     return paragraph[0]
 
 
-def to_groups1(paragraphs):
+def paragraphs2groups2(paragraphs):
     '''Assume paragraphs with one sentence are headers'''
     heading = None
     body = []
@@ -20,20 +20,17 @@ def to_groups1(paragraphs):
     yield (heading, body)
 
 
-def to_groups2(paragraphs):
+def paragraphs2groups1(paragraphs):
     '''Assume the first sentence of each paragraph is the header'''
     for paragraph in paragraphs:
         yield (paragraph[0], [paragraph[1:]])
 
 
-def to_groups(paragraphs):
+def paragraphs2groups(paragraphs2groups):
     # assuming each new line is its own heading
     # is there a reasonable number of headings?
     if len(list(filter(is_heading1, paragraphs))) > 4:
-        return to_groups1(paragraphs)
+        return paragraphs2groups1(paragraphs)
     else:
         # if not, then assume the first sentence is a heading
-        return to_groups2(paragraphs)
-
-
-__all__ = ['to_groups']
+        return paragraphs2groups2(paragraphs)

@@ -18,7 +18,7 @@ def regularize(text):
     return re.sub(non_letter, '', text)
 
 
-def to_words(clause):
+def clause2words(clause):
     """
     Given some text string, this function with regularizes the input through `regularize(clause)`,
     then it will return a list words in that clause.
@@ -29,15 +29,4 @@ def to_words(clause):
     `to_words('I Got 100')`
     returns an iterable containing 'i' and 'got'
     """
-    return filter(bool, regularize(clause).split(' '))
-
-
-def main():
-    example = 'I Got 100'
-    print(regularize(example))
-    o = to_words(example)
-    for i in o:
-        print(i)
-
-if __name__ == '__main__':
-    main()
+    return list(filter(bool, regularize(clause).split(' ')))

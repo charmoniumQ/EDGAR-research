@@ -2,5 +2,5 @@ from nltk.stem import porter
 stemmer = porter.PorterStemmer()
 
 
-def to_stem(word):
+def word2stem(word):
     return stemmer.stem(word)

@@ -1,12 +1,13 @@
-from ..util import lol
-from . import text
-from . import paragraphs
-from . import sentence
-from . import clause
-from . import word
+from ..util import generator_to_list
+from .text import text2paragraphs
+from .paragraphs import paragraph2sentences_func
+from .sentences import sentence2clauses
+from .clauses import clause2words
+from .word import word2stem
 
 
-def stem_text(text_):
+@generator_to_list
+def stem_text(text):
     '''Inputs text outputs a list of list of list of lists of stems
 
 Each section is a list of paragraphs
@@ -15,35 +16,10 @@ Each sentence is a list of clauses
 Each clause is a list of words
 Each word gets turned into a stem
 '''
-    # TODO: test lazy vs eager evaluation here
-    # TODO: test lol.lmap against nested for-loops
-    paragraphs_ = text.to_paragraphs(text_)
-    paragraphs_ = lol.llist(paragraphs_)
-
-    sentences = paragraphs.to_sentences(paragraphs_)
-    sentences = lol.llist(sentences)
-
-    clauses = lol.lmap(sentence.to_clauses, sentences, 2)
-    clauses = lol.llist(clauses)
-
-    words = lol.lmap(clause.to_words, clauses, 3)
-    words = lol.llist(words)
-
-    stems = lol.lmap(word.to_stem, words, 4)
-    stems = lol.llist(stems)
-
-    return stems
-
-
-if __name__ == '__main__':
-    from code.retrieve.main import download_all
-    import collections
-    c = collections.Counter()
-    for record, rf in download_all(2014, 1, '10-K', 'Item 1A').take(1):
-        for paragraph in stem_text(rf):
-            for sentence_ in paragraph:
-                for clause_ in sentence_:
-                    c.update(clause_)
-    print(c.most_common(10))
-    for word_, i in c.most_common(100):
-        print('{i: 4d} {word_}'.format(**locals()))
+    paragraph2sentences = paragraph2sentences_func(text)
+    for paragraph in text2paragraphs(text):
+        for sentence in paragraph2sentences(paragraph):
+            for clause in sentence2clauses(sentence):
+                for word in clause2words(clause):
+                    stem = word2stem(word)
+                    yield word, stem
