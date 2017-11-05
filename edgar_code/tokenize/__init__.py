@@ -1,2 +1,1 @@
-from .main import stem_text
-from .frequency import count
+from .main import text2section_word_stems, combine_counts

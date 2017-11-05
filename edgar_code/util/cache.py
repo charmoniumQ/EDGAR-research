@@ -183,16 +183,15 @@ class CustomStore(PickleStore):
     class-method get. These will be called with the args and kwargs in
     this class's __init__.'''
 
-    def __init__(self, path, gen_key, *args, **kwargs):
+    def __init__(self, path, gen_key=None, **kwargs):
         super().__init__(path, gen_key)
-        self.args = args
         self.kwargs = kwargs
 
     def put(self, obj):
         if hasattr(obj, 'put'):
             # the key[0] will be type(obj), so that we can call
             # key[0].get later
-            key = (type(obj), obj.put(*self.args, **self.kwargs))
+            key = (type(obj), obj.put(**self.kwargs))
         else:
             # fall back to PickleStore
             # the key[0] will indicate be None if we used pickle
@@ -202,7 +201,7 @@ class CustomStore(PickleStore):
     def get(self, key):
         if key[0] is not None:
             # note that get  should be a classmethod
-            return key[0].get(key[1], *self.args, **self.kwargs)
+            return key[0].get(key[1], **self.kwargs)
         else:
             return super().get(key[1])
 

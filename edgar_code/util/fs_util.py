@@ -11,7 +11,7 @@ RESULTS = Path('results')
 
 
 def sanitize_fname(fname):
-    fname = re.sub(r'[^a-zA-Z_-]', '_', fname)
+    fname = re.sub(r'[^a-zA-Z0-9_-]', '_', fname)
     fname = re.sub(r'_{2,}', '_', fname)
     fname = re.sub(r'_$', '', fname)
     return fname

@@ -22,4 +22,4 @@ def is_text_line(line):
     # remove non-alphabetic characters
     alpha_line = re.sub(non_letter, '', line).lower()
     # TODO: examine bullet-points in 1-800-FLOWERS
-    return len(alpha_line) > 50 and not(is_toc(alpha_line))
+    return len(alpha_line) > 10 and not(is_toc(alpha_line))

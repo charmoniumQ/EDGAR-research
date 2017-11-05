@@ -2,31 +2,28 @@ def is_heading1(paragraph):
     return len(paragraph) == 1
 
 
-def get_heading1(paragraph):
-    return paragraph[0]
-
-
-def paragraphs2groups2(paragraphs):
+def paragraphs2groups1(paragraphs):
     '''Assume paragraphs with one sentence are headers'''
-    heading = None
+    heading = []
     body = []
     for paragraph in paragraphs:
-        if is_heading1(paragraph):
-            yield (heading, body)
-            heading = get_heading1(paragraph)
-            body = []
+        if len(paragraph) == 1:
+            if heading or body:
+                yield (heading, body)
+            heading = [paragraph]
+            body.clear()
         else:
             body.append(paragraph)
     yield (heading, body)
 
 
-def paragraphs2groups1(paragraphs):
+def paragraphs2groups2(paragraphs):
     '''Assume the first sentence of each paragraph is the header'''
     for paragraph in paragraphs:
         yield (paragraph[0], [paragraph[1:]])
 
 
-def paragraphs2groups(paragraphs2groups):
+def paragraphs2groups(paragraphs):
     # assuming each new line is its own heading
     # is there a reasonable number of headings?
     if len(list(filter(is_heading1, paragraphs))) > 4:
