@@ -6,7 +6,7 @@ import random
 import string
 
 
-BOX_PATH = [Path('../Box Sync/EDGAR Team'), Path('~/Box Sync/EDGAR Team').expanduser()]
+BOX_PATH = [Path('../Box Sync/EDGAR Team'), Path('~/Box Sync/EDGAR Team').expanduser(), Path('~/box/EDGAR Team').expanduser()]
 RESULTS = Path('results')
 
 
@@ -23,7 +23,7 @@ def unused_fname(dire, fname):
     def candidates():
         yield dire / fname  # try just dire/fname
         for n in itertools.count(1):
-            yield dire / f'{fname}_{n}'  # otherwise add n
+            yield dire / '{fname}_{n}'.format(**locals)  # otherwise add n
 
     for try_fname in candidates():
         if not try_fname.exists():
