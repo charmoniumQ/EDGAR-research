@@ -5,6 +5,18 @@ from . import helpers
 from ..util import sanitize_fname, unused_fname
 
 
+def index_to_url(form_type, index):
+    sgml = urllib.request.urlopen(index.url).read()    
+    fileinfos = helpers.SGML_to_fileinfos(sgml)
+    for file_info in fileinfos:
+        if file_info['type'] == form_type:
+            filename = file_info['filename']
+            break
+    else:
+        raise RuntimeError('no form found')
+    url = index.url.replace('-', '')
+    return url[:-4] + '/' + filename
+
 @toolz.curry
 def index_to_form_text(form_type, index):
     sgml = urllib.request.urlopen(index.url).read()

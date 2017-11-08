@@ -21,9 +21,10 @@ class Cluster(object):
 
     def _provision_instances(self, load):
         if load:
-            all_instances = self.provisioner.find_instances(self.name)
-            for role, these_instances in all_instances.items():
-                self.roles[role]['instances'] = these_instances
+            for role_name, conf in self.roles.items():
+                self.roles[role]['instances'] = list(
+                    self.provisioner.find_instances(self.name, role_name)
+                )
         else:
             for role_name, conf in self.roles.items():
                 instances = self.provisioner.create_instances(
@@ -35,7 +36,7 @@ class Cluster(object):
 
         for role_name, conf in self.roles.items():
             conf['shells'] = self.provisioner.connect_to_instances(
-                conf['instances'], **conf['connect_to_instances']
+                conf['instances']
             )
 
     def _configure_instances(self):
@@ -58,4 +59,4 @@ class Cluster(object):
     def _deprovision_instances(self, save):
         if not save:
             for role in self.roles:
-                self.provisioner._deprovision(role['instances'])
+                self.provisioner.deprovision(role['instances'])

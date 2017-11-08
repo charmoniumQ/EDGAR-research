@@ -10,3 +10,4 @@ s3fs
 paramiko
 toolz
 pyyaml
+tqdm

@@ -47,3 +47,17 @@ def combine_counts(sections):
         word_count += header_wc + section_wc
         stem_count += header_sc + section_sc
     return word_count, stem_count
+
+
+def text2sections_and_counts(text):
+    p2s = paragraph2sentences_func(text)
+    paragraphs = [p2s(paragraph) for paragraph in text2paragraphs(text)]
+    for heading_paragraphs, body_paragraphs in paragraphs2groups(paragraphs):
+        stem_count = collections.Counter()
+
+        for word, stem in paragraphs2word_stems(heading_paragraphs):
+            stem_count[stem] += 1
+        for word, stem in paragraphs2word_stems(body_paragraphs):
+            stem_count[stem] += 1
+
+        yield heading_paragraphs, body_paragraphs, stem_count

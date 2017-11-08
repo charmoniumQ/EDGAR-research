@@ -15,6 +15,14 @@ Index = collections.namedtuple('Index', [
 ])
 
 
+def download_indexes_lazy(form_type, year, qtr):
+    '''Returns an bag of Record-types'''
+    lines = download_index_lines(year, qtr)
+    col_names = parse_header(lines)
+    indexes = parse_body(year, qtr, lines, col_names)
+    return filter_form_type(indexes, form_type)
+
+
 def download_indexes(form_type, year, qtr):
     '''Returns an bag of Record-types'''
     lines = download_index_lines(year, qtr)
@@ -80,9 +88,13 @@ def parse_body(year, qtr, lines, col_names):
 
 
 def filter_form_type(records, this_form_type):
+    found_section = False
     for record in records:
         if record.form_type == this_form_type:
+            found_section = True
             yield record
+        elif found_section:
+            break
 #     form_types = itertools.groupby(records, operator.attrgetter('form_type'))
 #     for form_type, records in form_types:
 #         if this_form_type == form_type:
