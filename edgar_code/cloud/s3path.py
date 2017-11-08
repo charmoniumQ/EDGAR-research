@@ -1,10 +1,10 @@
-from pathlib import PurePath
+from pathlib import PurePosixPath
 
 class S3Path(object):
     def __init__(self, bucket, path, s3fs):
         self.s3fs = s3fs
         self.bucket = bucket
-        self.path = PurePath(path)
+        self.path = PurePosixPath(path)
         if self.path.anchor != '/':
             self.path = '/' / self.path
 

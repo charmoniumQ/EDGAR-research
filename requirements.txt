@@ -11,3 +11,4 @@ paramiko
 toolz
 pyyaml
 tqdm
+cloudpickle
