@@ -4,6 +4,7 @@ from ..util.cache import Cache, IndexInFile, CustomStore
 from .index import download_indexes
 from .form import index_to_form_text, form_text_to_main_text, main_text_to_form_items
 from .rf import form_items_to_rf
+from .directors import form_items_to_directors
 
 
 # TODO: allow the caller to set the cache path and S3 credentials, instead of
@@ -36,6 +37,11 @@ def main_texts_for(form_type, year, qtr):
 
 @Cache(IndexInFile(index_cache), CustomStore(object_cache, None, dir_=object_cache), 'hit {name} with {key}', 'miss {name} with {key}')
 def form_itemss_for(form_type, year, qtr):
+    '''
+    :return: bag of dictionaries where each dict has a form-heading as its key, and the text of that form-heading as its value.
+    For example:
+    {'Item 1A': 'This is the section 1a text here.', 'Item 2': 'This is the section 2 text'}
+    '''
     return main_texts_for(form_type, year, qtr) \
         .map_values(main_text_to_form_items(form_type))
 
@@ -44,6 +50,15 @@ def form_itemss_for(form_type, year, qtr):
 def rfs_for(year, qtr):
     return form_itemss_for('10-K', year, qtr) \
         .map_values(form_items_to_rf)
+
+
+def directors_for(year, qtr):
+    """
+    Departure of Directors (item 5.02, form 8k)
+    :return:
+    """
+    return form_itemss_for('8-k', year, qtr) \
+        .map_values(form_items_to_directors)
 
 # no cache because not much work to compute
 def good_rfs_for(form_type, year, qtr):
@@ -60,4 +75,14 @@ cached.'''
         form_text_to_main_text('10-K'),
         main_text_to_form_items('10-K'),
         form_items_to_rf,
+    )
+
+
+def index_to_directors(index):
+    return toolz.pipe(
+        index,
+        index_to_form_text('8-K'),
+        form_text_to_main_text('8-K'),
+        main_text_to_form_items('8-K'),
+        form_items_to_directors
     )
