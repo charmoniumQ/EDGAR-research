@@ -15,7 +15,7 @@ def indexes_for(year):
 
 
 stop_words = set()
-with open(find_file('stop_words.csv', BOX_PATH)) as f:
+with find_file('stop_words.csv', BOX_PATH).open() as f:
     for stop_word in f:
         stop_words.add(stop_word)
 
