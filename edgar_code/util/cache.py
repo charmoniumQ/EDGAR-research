@@ -63,16 +63,16 @@ class Cache(object):
         '''gets called where the funciton would be called'''
         key = self.hashable_args(*args, **kwargs)
         if key in self.index:
-            res = self.store.get(self.index[key])
             if self.hit_msg:
                 print(self.hit_msg
                       .format(key=repr((args, kwargs)), name=self.name))
+            res = self.store.get(self.index[key])
         else:
-            res = self.function(*args, **kwargs)
-            self.index[key] = self.store.put(res)
             if self.miss_msg:
                 print(self.miss_msg
                       .format(key=repr((args, kwargs)), name=self.name))
+            res = self.function(*args, **kwargs)
+            self.index[key] = self.store.put(res)
         return res
 
     @classmethod

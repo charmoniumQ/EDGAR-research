@@ -6,7 +6,7 @@ import random
 import string
 
 
-BOX_PATH = [Path('../Box Sync/EDGAR Team'), Path('~/Box Sync/EDGAR Team').expanduser(), Path('~/box/EDGAR Team').expanduser()]
+BOX_PATH = [Path('../Box Sync/EDGAR Team'), Path('~/Box Sync/EDGAR Team').expanduser(), Path('~/box/EDGAR Team').expanduser(), Path('~/Documents/EDGAR Team').expanduser(), ]
 RESULTS = Path('results')
 
 
@@ -17,20 +17,25 @@ def sanitize_fname(fname):
     return fname
 
 
-def unused_fname(dire, fname):
+def unused_fname(dire, fname, suffix):
     # TODO: make this more general, eliminate duplicated code
 
     def candidates():
         yield dire / fname  # try just dire/fname
         for n in itertools.count(1):
-            yield dire / '{fname}_{n}'.format(**locals)  # otherwise add n
+            yield dire / '{fname}_{n}.{suffix}'.format(**locals)  # otherwise add n
 
     for try_fname in candidates():
         if not try_fname.exists():
             return try_fname
 
 
-def new_directory():
+def sanitize_unused_fname(dir_, name, suffix):
+    starting_fname = sanitize_fname(name)
+    fname = unused_fname(dir_, starting_fname, suffix)
+    return fname
+
+def new_directory(verbose=True):
     if not RESULTS.exists():
         RESULTS.mkdir()
 
@@ -40,6 +45,8 @@ def new_directory():
         if not directory.exists():
             break
     directory.mkdir()
+    if verbose:
+        print('results in {!s}'.format(directory))
     return directory
 
 

@@ -15,6 +15,7 @@ object_cache = get_s3path('cache', 'cache')
 
 @Cache(IndexInFile(index_cache), CustomStore(object_cache, dir_=object_cache), 'hit {name} with {key}', 'miss {name} with {key}')
 def section_word_stems_for(year, qtr):
+    # this is the cluster-compting part
     return (
         rfs_for(year, qtr)
         .filter_values(bool)
@@ -28,6 +29,8 @@ def main(year, qtr, dir_):
     pbar.register()
     data = section_word_stems_for(year, qtr).map_values(combine_counts)
     for record, (wc, sc) in data.compute():
+        # this is collecting and storing the results locally
+
         starting_fname = sanitize_fname(record.company_name)
         fname = unused_fname(dir_, starting_fname).with_suffix('.txt')
         print('{record.company_name} -> {fname.name}'.format(**locals()))

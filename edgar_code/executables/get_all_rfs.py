@@ -1,15 +1,18 @@
 import json
-from edgar_code.util import new_directory, sanitize_fname, unused_fname
+from edgar_code.util import new_directory, sanitize_unused_fname
 from edgar_code.retrieve import rfs_for
 from dask.diagnostics import ProgressBar
 
 
 def main(year, qtr, dir_):
+    # issue cluster-compute command
+    rfs = rfs_for(year, qtr)
+    
+    # collect results locally
     pbar = ProgressBar()
     pbar.register()
-    for record, rf in rfs_for(year, qtr).compute():
-        starting_fname = sanitize_fname(record.company_name)
-        fname = unused_fname(dir_, starting_fname).with_suffix('.txt')
+    for record, rf in rfs.compute():
+        fname = sanitize_unused_fname(dir_, record.company_name, 'txt')
         print('{record.company_name} -> {fname.name}'.format(**locals()))
         with fname.open('w', encoding='utf-8') as f:
             if rf:
@@ -22,7 +25,6 @@ def main(year, qtr, dir_):
 
 if __name__ == '__main__':
     year = 2008
-    qtr = 2
+    qtr = 1
     dir_ = new_directory()
-    print('results in', dir_)
     main(year, qtr, dir_)

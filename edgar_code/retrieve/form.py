@@ -2,7 +2,6 @@ import re
 import urllib
 import toolz
 from . import helpers
-from ..util import sanitize_fname, unused_fname
 
 
 def index_to_url(form_type, index):
