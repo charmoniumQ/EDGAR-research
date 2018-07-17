@@ -7,8 +7,12 @@ matplotlib
 dask
 dask[bag]
 s3fs
-paramiko
+# paramiko
 toolz
 pyyaml
 tqdm
 cloudpickle
+pyhaikunator
+beautifulsoup4
+google-api-python-client
+docker
