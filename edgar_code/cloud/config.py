@@ -4,6 +4,7 @@ import yaml
 import boto3
 import docker
 from edgar_code.util import find_file, BOX_PATH, rand_name
+from google.oauth2 import service_account
 from .s3path import S3Path
 
 
@@ -66,3 +67,8 @@ def get_docker():
     repo = config['docker']['repository']
     name = config['docker']['name']
     return client, repo, name
+
+def get_google_cred():
+    cred = service_account.Credentials.from_service_account_info(
+        info=config['gcloud']['service_account'])
+    return cred, config['gcloud']['location']

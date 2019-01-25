@@ -7,6 +7,10 @@ import os
 from .fs_util import rand_names
 
 
+# TODO: allow caching 'named objects'. Cache the name instead of the object.
+# TODO: allow caching objects by provenance. Cache the thing you did to make the object instead of the object.
+# https://github.com/bmabey/provenance
+
 class Cache(object):
     def __init__(self, index, store, hit_msg=None, miss_msg=None, suffix=''):
         '''

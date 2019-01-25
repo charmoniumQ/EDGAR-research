@@ -31,5 +31,4 @@ if __name__ == '__main__':
     qtr = 1
     filterer = pick_n(n=100)
     dir_ = new_directory()
-    print('results in', dir_)
     main(year, qtr, filterer, dir_)
