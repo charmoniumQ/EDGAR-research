@@ -3,14 +3,23 @@ import io
 import yaml
 import boto3
 import docker
+import tempfile
 from edgar_code.util import find_file, BOX_PATH, rand_name
 from google.oauth2 import service_account
+from pathlib import Path
 from .s3path import S3Path
 
 
 # TODO: completely encapsulate config.yaml so that nobody else gets to see/care
 # about its schema.
 
+# TODO: this should not be in `cloud` subpackage
+
+# TODO: this should not be self-modifying. The self-modifying part
+# should be in a different file. It is conceptually a 'store' or
+# 'cache' not a 'config'.
+
+# TODO: use a singleton object with properties
 
 config_file = find_file('config.yaml', BOX_PATH)
 if not config_file:
@@ -70,5 +79,20 @@ def get_docker():
 
 def get_google_cred():
     cred = service_account.Credentials.from_service_account_info(
-        info=config['gcloud']['service_account'])
+        info=config['gcloud']['service_account']
+    )
     return cred, config['gcloud']['location']
+
+def get_google_oauth():
+    cred = service_account.Credentials.from_service_account_info(
+        info=config['gcloud']['service_account']
+    )
+    return cred, config['gcloud']['location']
+
+_tempdir = tempfile.TemporaryDirectory()
+def get_tempdir():
+    return Path(_tempdir.name)
+
+_cachedir = Path(tempfile.gettempdir()) / 'edgar_code'
+def get_cachedir():
+    return _cachedir

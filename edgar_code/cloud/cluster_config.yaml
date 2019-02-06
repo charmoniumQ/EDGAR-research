@@ -1,0 +1,101 @@
+---
+# See https://developers.google.com/resources/api-libraries/documentation/container/v1/python/latest/container_v1.projects.locations.clusters.html#create
+parent: fill at runtime
+cluster:
+
+  networkPolicy:
+    enabled: no
+    # provider: N/A
+
+  # masterAuthorizedNetworksConfig:
+  #   enabled: yes
+  #   cidrBlocks:
+  #     - displayName: utd-ip
+  #       cidrBlock: "129.0.0.0/16"
+
+  addonsConfig:
+    httpLoadBalancing:
+      disabled: yes
+    networkPolicyConfig:
+      disabled: yes
+    kubernetesDashboard:
+      disabled: yes
+    horizontalPodAutoscaling:
+      disabled: yes
+
+  locations:
+    - fill at runtime
+
+  loggingService: "logging.googleapis.com"
+
+  ipAllocationPolicy:
+    useIpAliases: no
+    clusterIpv4CidrBlock: "192.168.0.0/24"
+    servicesIpv4CidrBlock: "192.168.1.0/24"
+    nodeIpv4CidrBlock: "192.168.2.0/24"
+
+  initialNodeCount: fill at runtime
+
+  name: fill at runtime
+    # The name of this cluster. The name must be unique within this project
+    # and zone, and can be up to 40 characters with the following restrictions:
+    #
+    # * Lowercase letters, numbers, and hyphens only.
+    # * Must start with a letter.
+    # * Must end with a number or a letter.
+
+  nodeConfig:
+    machineType: 
+    tags:
+      - owned-by-cluster
+    preemptible: yes
+
+    # labels:
+    #   key: string
+      # The map of Kubernetes labels (key/value pairs) to be applied to each node.
+      # These will added in addition to any default label(s) that
+      # Kubernetes may apply to the node.
+      # In case of conflict in label keys, the applied set may differ depending on
+      # the Kubernetes version -- it's best to assume the behavior is undefined
+      # and conflicts should be avoided.
+      # For more information, including usage and the valid values, see:
+      # https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+
+    serviceAccount: fill at runtime
+
+    diskSizeGb: 10
+      # Size of the disk attached to each node, specified in GB.
+      # The smallest allowed disk size is 10GB.
+      #
+      # If unspecified, the default disk size is 100GB.
+
+
+    # minCpuPlatform: fill in if you uncomment
+      # Minimum CPU platform to be used by this instance. The instance may be
+      # scheduled on the specified or newer CPU platform. Applicable values are the
+      # friendly names of CPU platforms, such as
+      # <code>minCpuPlatform: &quot;Intel Haswell&quot;</code> or
+      # <code>minCpuPlatform: &quot;Intel Sandy Bridge&quot;</code>. For more
+      # information, read [how to specify min CPU
+      # platform](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform)
+
+    # localSsdCount: 42
+      # The number of local SSD disks to be attached to the node.
+      #
+      # The limit for this value is dependant upon the maximum number of
+      # disks available on a machine per zone. See:
+      # https://cloud.google.com/compute/docs/disks/local-ssd#local_ssd_limits
+      # for more information.
+
+    # imageType: fill in if you uncomment
+      # The image type to use for this node. Note that for a given image type,
+      # the latest version of it will be used.
+
+    # metadata:
+      # key: string
+        # The metadata key/value pairs assigned to instances in the cluster.
+        #
+        # Keys must conform to the regexp [a-zA-Z0-9-_]+ and be less than 128 bytes
+        # in length. These are reflected as part of a URL in the metadata server.
+        # Additionally, to avoid ambiguity, keys must not conflict with any other
+        # metadata keys for the project or be one of the reserved keys

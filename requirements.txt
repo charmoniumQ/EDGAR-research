@@ -17,3 +17,4 @@ beautifulsoup4
 google-api-python-client
 docker
 google-auth
+kubernetes
