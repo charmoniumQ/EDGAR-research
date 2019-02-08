@@ -1,20 +1,14 @@
-# bokeh
-nltk
-numpy
-# scipy
-sklearn
-matplotlib
+# TODO: separate these into
+
+# - deploy requirements
+
+# - master requirements
 dask
 dask[bag]
-s3fs
-# paramiko
-toolz
-pyyaml
 tqdm
-cloudpickle
-pyhaikunator
+
+# - worker requirements
+nltk
 beautifulsoup4
-google-api-python-client
-docker
-google-auth
-kubernetes
+numpy
+s3fs

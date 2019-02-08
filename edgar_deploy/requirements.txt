@@ -1,0 +1,6 @@
+pyhaikunator
+pyyaml
+google-auth
+google-cloud-container
+kubernetes
+docker

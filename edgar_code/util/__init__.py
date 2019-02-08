@@ -9,6 +9,10 @@ from .fs_util import (
 from . import cache
 
 
+class Struct(object):
+    pass
+
+
 def generator_to_list(f):
     def f_(*args, **kwargs):
         return list(f(*args, **kwargs))
