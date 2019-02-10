@@ -1,5 +1,6 @@
 from .config import config
 from .cluster import Cluster
+from . import utils
 import subprocess
 import base64
 import json
@@ -48,96 +49,98 @@ class GKECluster(Cluster):
                 ),
             ),
         )
-        self.cluster_manager.create_cluster(None, None, self.gke_cluster, parent=self.parent_path)
-        #self.gke_cluster = self.cluster_manager.get_cluster(None, None, None, name=self.name_path)
-        #print(self.gke_cluster)
+        with utils.time_code('gke cluster create'):
+            #self.cluster_manager.create_cluster(None, None, self.gke_cluster, parent=self.parent_path)
+            self.gke_cluster = self.cluster_manager.get_cluster(None, None, None, name=self.name_path)
+            #print(self.gke_cluster)
 
         # tried: https://banzaicloud.com/blog/pipeline-gke-rbac/
         # tried: https://stackoverflow.com/a/48377444/1078199
         # using: https://stackoverflow.com/questions/54410410/authenticating-to-gke-master-in-python/54534575#54534575
-        subprocess.run([
-            'gcloud', '--quiet', 'container', 'clusters',
-            'get-credentials', self.gke_cluster.name,
-            '--region', self.gke_cluster.location
-        ], capture_output=True)
+        with utils.time_code('gcloud auth'):
+            subprocess.run([
+                'gcloud', '--quiet', 'container', 'clusters',
+                'get-credentials', self.gke_cluster.name,
+                '--region', self.gke_cluster.location
+            ], capture_output=True)
 
-        objects = [
-            {
-                'apiVersion': 'v1',
-                'kind': 'Namespace',
-                'metadata': {
-                    'name': self.namespace,
-                },
-            },
-            {
-                'apiVersion': 'v1',
-                'kind': 'ServiceAccount',
-                'metadata': {
-                    'name': self.username,
-                    'namespace': self.namespace,
-                },
-            },
-            {
-                'apiVersion': 'rbac.authorization.k8s.io/v1',
-                'kind': 'RoleBinding',
-                'metadata': {
-                    'name': f'{self.username}-rolebinding',
-                    'namespace': self.namespace,
-                },
-                'subjects': [
-                    {
-                        'kind': 'ServiceAccount',
-                        'name': self.username,
-                        'namespace': self.namespace,
-                    },
-                ],
-                'roleRef': {
-                    'apiGroup': 'rbac.authorization.k8s.io',
-                    'kind': 'ClusterRole',
-                    'name': 'cluster-admin',
-                },
-            },
-        ]
+        with utils.time_code('kube setup'):
+            kubernetes.config.load_kube_config()
+            kube_api = kubernetes.client.ApiClient()
+            kube_v1 = kubernetes.client.CoreV1Api(kube_api)
+            kube_v1.create_namespace(
+                kubernetes.client.V1Namespace(
+                    metadata=kubernetes.client.V1ObjectMeta(
+                        name=self.namespace,
+                    ),
+                ),
+            )
+            service_account = kube_v1.create_namespaced_service_account(
+                self.namespace,
+                kubernetes.client.V1ServiceAccount(
+                    metadata=kubernetes.client.V1ObjectMeta(
+                        namespace=self.namespace,
+                        name=self.username,
+                    ),
+                ),
+            )
 
-        for i, object_ in enumerate(objects):
-            with open(config.scratch_dir / f'{i}.json', 'w') as f:
-                json.dump(object_, f)
-        subprocess.run(['kubectl', 'apply'] + flatten1([('-f', f'{i}.json') for i in range(objects)]))
+            kube_rbac_authorization_v1 = kubernetes.client.RbacAuthorizationV1Api(kube_api)
+            kube_rbac_authorization_v1.create_namespaced_role_binding(
+                self.namespace,
+                kubernetes.client.V1RoleBinding(
+                    metadata=kubernetes.client.V1ObjectMeta(
+                        namespace=self.namespace,
+                        name=f'{self.username}-rolebinding',
+                    ),
+                    role_ref=kubernetes.client.V1RoleRef(
+                        api_group='rbac.authorization.k8s.io',
+                        kind='ClusterRole',
+                        name='cluster-admin',
+                    ),
+                    subjects=[
+                        kubernetes.client.V1Subject(
+                            kind='ServiceAccount',
+                            name=self.username,
+                            namespace=self.namespace,
+                        ),
+                    ],
+                ),
+            )
+            secret = kube_v1.read_namespaced_secret(service_account.secrets[0], self.namespace)
 
-        self._configure_access()
+        self._configure_access(secret)
 
     def _load(self):
         try:
-            self.gke_cluster = self.cluster_manager.get_cluster(None, None, None, name=self.name_path)
+            with utils.time_code('gke cluster list'):
+                self.gke_cluster = self.cluster_manager.get_cluster(None, None, None, name=self.name_path)
         except google.api_core.exceptions.NotFound:
             return False
         else:
-            self._configure_access()
+            with utils.time_code('gcloud auth'):
+                subprocess.run([
+                    'gcloud', '--quiet', 'container', 'clusters',
+                    'get-credentials', self.gke_cluster.name,
+                    '--region', self.gke_cluster.location
+                ], capture_output=True)
+            kubernetes.config.load_kube_config()
+            kube_api = kubernetes.client.ApiClient()
+            kube_v1 = kubernetes.client.CoreV1Api(kube_api)
+            service_account = kube_v1.read_namespaced_service_account(self.username, self.namespace)
+            secret = kube_v1.read_namespaced_secret(service_account.secrets[0].name, self.namespace)
+            self._configure_access(secret)
             return True
 
     def _delete(self):
         self.cluster_manager.delete_cluster(None, None, None, name=self.name_path)
         self.gke_cluster = None
 
-    def _configure_access(self):
-        secret_name = subprocess.run([
-            'kubectl',  '--namespace', self.namespace,
-            'get', f'serviceaccounts/{self.username}',
-            '-o', 'jsonpath={.secrets[0].name}'
-        ], capture_output=True, encoding='ascii').stdout
-        if not secret_name:
-            raise RuntimeError(f'no secret corresponding to serviceaccounts/{self.username}')
-
-        secret = json.loads(subprocess.run([
-            'kubectl',  '--namespace', self.namespace,
-            'get', f'secret/{secret_name}', '-o', 'json'
-        ], capture_output=True).stdout)
-        client_cert =  base64.decodebytes(secret['data']['ca.crt'].encode())
-        client_token = base64.decodebytes(secret['data']['token'].encode()).decode()
-
+    def _configure_access(self, secret):
+        token = base64.decodebytes(secret.data['token'].encode())
         self.kube_config = kubernetes.client.Configuration()
         self.kube_config.verify_ssl = True
-        self.kube_config.api_key['authorization'] = client_token
+        self.kube_config.api_key['authorization'] = token
         self.kube_config.api_key_prefix['authorization'] = 'Bearer'
 
         for logger in self.kube_config.logger.values():
