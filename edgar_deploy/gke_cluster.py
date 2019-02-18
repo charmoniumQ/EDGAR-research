@@ -10,6 +10,8 @@ import google
 from google.cloud import container_v1
 # https://github.com/kubernetes-client/python
 import kubernetes
+# import warnings
+# warnings.simplefilter("always")
 
 
 class GKECluster(Cluster):
@@ -33,6 +35,10 @@ class GKECluster(Cluster):
                 disk_size_gb=10,
                 # TODO: examine the effect of this
                 preemptible=True,
+                # for GCR https://googleapis.github.io/google-cloud-python/latest/container/gapic/v1/types.html#google.cloud.container_v1.types.NodeConfig.oauth_scopes
+                oauth_scopes=[
+                    'https://www.googleapis.com/auth/devstorage.read_only',
+                ],
             ),
             addons_config=container_v1.types.AddonsConfig(
                 http_load_balancing=container_v1.types.HttpLoadBalancing(
@@ -50,9 +56,14 @@ class GKECluster(Cluster):
             ),
         )
         with utils.time_code('gke cluster create'):
-            #self.cluster_manager.create_cluster(None, None, self.gke_cluster, parent=self.parent_path)
-            self.gke_cluster = self.cluster_manager.get_cluster(None, None, None, name=self.name_path)
-            #print(self.gke_cluster)
+            self.cluster_manager.create_cluster(None, None, self.gke_cluster, parent=self.parent_path)
+
+        with utils.time_code('gke cluster provision'):
+            while True:
+                self.gke_cluster = self.cluster_manager.get_cluster(None, None, None, name=self.name_path)
+                if self.gke_cluster.status == google.cloud.container_v1.enums.Cluster.Status.RUNNING.value:
+                    break
+                time.sleep(10)
 
         # tried: https://banzaicloud.com/blog/pipeline-gke-rbac/
         # tried: https://stackoverflow.com/a/48377444/1078199
@@ -75,11 +86,10 @@ class GKECluster(Cluster):
                     ),
                 ),
             )
-            service_account = kube_v1.create_namespaced_service_account(
+            kube_v1.create_namespaced_service_account(
                 self.namespace,
                 kubernetes.client.V1ServiceAccount(
                     metadata=kubernetes.client.V1ObjectMeta(
-                        namespace=self.namespace,
                         name=self.username,
                     ),
                 ),
@@ -90,7 +100,6 @@ class GKECluster(Cluster):
                 self.namespace,
                 kubernetes.client.V1RoleBinding(
                     metadata=kubernetes.client.V1ObjectMeta(
-                        namespace=self.namespace,
                         name=f'{self.username}-rolebinding',
                     ),
                     role_ref=kubernetes.client.V1RoleRef(
@@ -107,7 +116,8 @@ class GKECluster(Cluster):
                     ],
                 ),
             )
-            secret = kube_v1.read_namespaced_secret(service_account.secrets[0], self.namespace)
+            service_account = kube_v1.read_namespaced_service_account(self.username, self.namespace)
+            secret = kube_v1.read_namespaced_secret(service_account.secrets[0].name, self.namespace)
 
         self._configure_access(secret)
 
@@ -124,11 +134,12 @@ class GKECluster(Cluster):
                     'get-credentials', self.gke_cluster.name,
                     '--region', self.gke_cluster.location
                 ], capture_output=True)
-            kubernetes.config.load_kube_config()
-            kube_api = kubernetes.client.ApiClient()
-            kube_v1 = kubernetes.client.CoreV1Api(kube_api)
-            service_account = kube_v1.read_namespaced_service_account(self.username, self.namespace)
-            secret = kube_v1.read_namespaced_secret(service_account.secrets[0].name, self.namespace)
+            with utils.time_code('kube load setup'):
+                kubernetes.config.load_kube_config()
+                kube_api = kubernetes.client.ApiClient()
+                kube_v1 = kubernetes.client.CoreV1Api(kube_api)
+                service_account = kube_v1.read_namespaced_service_account(self.username, self.namespace)
+                secret = kube_v1.read_namespaced_secret(service_account.secrets[0].name, self.namespace)
             self._configure_access(secret)
             return True
 
@@ -161,15 +172,11 @@ class GKECluster(Cluster):
         self.kube_v1 = kubernetes.client.CoreV1Api(self.kube_api)
 
 
-def flatten1(list_):
-    return [elem for list2 in list1 for elem in list2]
-
-
 if __name__ == '__main__':
     from pprint import pprint
     import logging
     logging.basicConfig(level=logging.INFO)
-    g = GKECluster('test-cluster-1', load=True, save=True)
+    g = GKECluster('test-cluster-1', load=True, save=False)
     with g:
         pods = g.kube_v1.list_namespaced_pod(g.namespace)
         pprint(pods)

@@ -2,7 +2,7 @@ import logging
 
 
 class Cluster(object):
-    def __init__(self, name=None, nodecount=3, save=False, load=False):
+    def __init__(self, name=None, nodecount=3, save=False, load=False, reconfigure=False):
         self.name = name
         self.nodecount = nodecount
         self.load = load

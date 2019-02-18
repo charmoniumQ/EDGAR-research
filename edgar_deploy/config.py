@@ -16,6 +16,7 @@ class Config(object):
     # could be replaced with a dynamic property.
     def __init__(self):
         self.module_dir = Path(sys.argv[0]).parent
+        self.project_dir = self.module_dir.parent
 
         with open(self.module_dir / 'config.yaml', 'r') as f:
             config = yaml.load(f)
