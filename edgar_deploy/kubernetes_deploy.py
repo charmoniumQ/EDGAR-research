@@ -8,15 +8,16 @@ from . import utils
 
 
 def prepare_images():
-    subprocess.run(['gcloud', '--quiet', 'auth', 'configure-docker'])
+    subprocess.run(['gcloud', '--quiet', 'auth', 'configure-docker'], capture_output=True)
     client = docker.from_env()
 
     cluster_dir = config.project_dir / 'edgar_cluster'
-    for dockerfile in cluster_dir.glob('Dockerfile-*'):
-        name = dockerfile.name.split('-')[-1]
-        tag = f'gcr.io/{config.gcloud.project}/{name}:latest'
+    with utils.time_code(f'docker'):
+        for dockerfile in cluster_dir.glob('Dockerfile-*'):
+            name = dockerfile.name.split('-')[-1]
+            tag = f'gcr.io/{config.gcloud.project}/{name}:latest'
 
-        with utils.time_code('docker build'):
+            # with utils.time_code(f'docker build {name}'):
             client.images.build(
                 path=str(cluster_dir),
                 dockerfile=dockerfile,
@@ -24,31 +25,39 @@ def prepare_images():
                 quiet=False,
                 nocache=False,
                 rm=False,
+                # TODO: does this need cache_from=[tag]
             )
 
-        with utils.time_code('docker push'):
+            # with utils.time_code(f'docker push {name}'):
             client.images.push(tag)
 
 
 @contextlib.contextmanager
-def deploy_kubernetes(cluster):
+def deploy_kubernetes(kube_api, namespace, n_workers):
     ports = {
         'scheduler': 8786,
         # 'dashboard': 8787,
     }
     scheduler_address = f'tcp://scheduler:{ports["scheduler"]}'
 
-    kube_v1 = kubernetes.client.CoreV1Api(cluster.kube_api)
-    kube_v1beta = kubernetes.client.ExtensionsV1beta1Api(cluster.kube_api)
-    kube_v1batch = kubernetes.client.BatchV1Api(cluster.kube_api)
+    kube_v1 = kubernetes.client.CoreV1Api(kube_api)
+    kube_v1beta = kubernetes.client.ExtensionsV1beta1Api(kube_api)
+    kube_v1batch = kubernetes.client.BatchV1Api(kube_api)
 
     # TODO: async parallelism
     # TODO: support mulitple usages
     # TODO: include uninitialized
 
     with utils.time_code('kube deploy'):
+        kube_v1.create_namespace(
+            kubernetes.client.V1Namespace(
+                metadata=kubernetes.client.V1ObjectMeta(
+                    name=namespace,
+                ),
+            ),
+        )
         kube_v1beta.create_namespaced_deployment(
-            cluster.namespace,
+            namespace,
             kubernetes.client.ExtensionsV1beta1Deployment(
                 metadata=kubernetes.client.V1ObjectMeta(
                     name='scheduler',
@@ -77,12 +86,15 @@ def deploy_kubernetes(cluster):
                                         for name, port in ports.items()
                                     ],
                                     command=[
-                                        'dask-scheduler',
-                                        '--port', str(ports['scheduler']),
-                                        # '--bokeh-port', str(ports['dashboard']),
-                                        '--no-bokeh',
-                                        '--host', '0.0.0.0',
+                                        '/bin/sh', '-c', f'dask-scheduler --port {ports["scheduler"]} --no-bokeh | tee log', 
                                     ],
+                                    # readiness_probe=kubernetes.client.V1Probe(
+                                    #     _exec=kubernetes.client.V1ExecAction(
+                                    #         command=[
+                                    #             '/bin/sh', '-c', f"test {n_workers} -le $(grep 'Starting established connection' log | wc -l)",
+                                    #         ],
+                                    #     ),
+                                    # ),
                                 ),
                             ],
                         ),
@@ -92,7 +104,7 @@ def deploy_kubernetes(cluster):
         )
 
         kube_v1.create_namespaced_service(
-            cluster.namespace,
+            namespace,
             kubernetes.client.V1Service(
                 metadata=kubernetes.client.V1ObjectMeta(
                     name='scheduler',
@@ -109,13 +121,13 @@ def deploy_kubernetes(cluster):
         )
 
         kube_v1beta.create_namespaced_deployment(
-            cluster.namespace,
+            namespace,
             kubernetes.client.ExtensionsV1beta1Deployment(
                 metadata=kubernetes.client.V1ObjectMeta(
                     name='worker',
                 ),
                 spec=kubernetes.client.ExtensionsV1beta1DeploymentSpec(
-                    replicas=cluster.nodecount,
+                    replicas=n_workers,
                     selector=kubernetes.client.V1LabelSelector(
                         match_labels=dict(
                             deployment='scheduler',
@@ -134,7 +146,7 @@ def deploy_kubernetes(cluster):
                                     name='worker',
                                     image=f'gcr.io/{config.gcloud.project}/worker:latest',
                                     command=[
-                                        'dask-worker', scheduler_address,
+                                        '/bin/sh', '-c', f'dask-worker {scheduler_address} | tee log'
                                         # TODO: memory management
                                         # TODO: nprocs
                                         # TODO: nthreads
@@ -148,7 +160,7 @@ def deploy_kubernetes(cluster):
         )
 
         kube_v1batch.create_namespaced_job(
-            cluster.namespace,
+            namespace,
             kubernetes.client.V1Job(
                 metadata=kubernetes.client.V1ObjectMeta(
                     name='job',
@@ -183,18 +195,15 @@ def deploy_kubernetes(cluster):
         delete_opts = kubernetes.client.V1DeleteOptions(
             propagation_policy='Foreground'
         )
-        kube_v1beta.delete_namespaced_deployment('scheduler', cluster.namespace, body=delete_opts)
-        kube_v1.delete_namespaced_service('scheduler', cluster.namespace, body=delete_opts)
-        kube_v1beta.delete_namespaced_deployment('worker', cluster.namespace, body=delete_opts)
-        kube_v1batch.delete_namespaced_job('job',cluster.namespace, body=delete_opts)
+        kube_v1.delete_namespace(namespace, body=delete_opts)
 
 if __name__ == '__main__':
     # kubectl --namespace dask delete deployments,services,jobs -l use=temporary
     # prepare_images()
     from .gke_cluster import GKECluster
-    g = GKECluster('test-cluster-1', load=True, save=True)
+    g = GKECluster('test-cluster-1', load=True, save=False)
     with g:
-        with deploy_kubernetes(g):
+        with deploy_kubernetes(g.kube_api, g.managed_namespace, g.nodecount):
             print('done ish')
             input()
             # kubectl -n dask logs $(kubectl -n dask get -o 'jsonpath={.items[].metadata.name}' pods -l job-name=job)

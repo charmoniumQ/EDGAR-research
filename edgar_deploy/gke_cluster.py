@@ -19,7 +19,8 @@ class GKECluster(Cluster):
         super().__init__(*args, **kwargs)
         self.cluster_manager = container_v1.ClusterManagerClient(credentials=config.gcloud.credentials)
         self.username = 'main-user'
-        self.namespace = 'dask'
+        self.namespace = 'edgar'
+        self.managed_namespace = 'ed'
         self.gke_cluster = None
         self.parent_path = f"projects/{config.gcloud.project}/locations/{config.gcloud.fq_zone}"
         self.name_path = f"projects/{config.gcloud.project}/locations/{config.gcloud.fq_zone}/clusters/{self.name}"
@@ -111,7 +112,7 @@ class GKECluster(Cluster):
                         kubernetes.client.V1Subject(
                             kind='ServiceAccount',
                             name=self.username,
-                            namespace=self.namespace,
+                            namespace=self.managed_namespace,
                         ),
                     ],
                 ),

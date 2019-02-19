@@ -2,5 +2,6 @@ pyhaikunator
 pyyaml
 google-auth
 google-cloud-container
+google-cloud-pubsub
 kubernetes
 docker
