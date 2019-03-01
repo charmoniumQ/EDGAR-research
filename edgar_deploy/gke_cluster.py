@@ -8,7 +8,7 @@ import time
 import google
 # https://googleapis.github.io/google-cloud-python/latest/container/gapic/v1/api.html
 from google.cloud import container_v1
-# https://github.com/kubernetes-client/python
+# https://github.com/kubernetes-client/python/blob/master/kubernetes/README.md
 import kubernetes
 # import warnings
 # warnings.simplefilter("always")
@@ -19,7 +19,7 @@ class GKECluster(Cluster):
         super().__init__(*args, **kwargs)
         self.cluster_manager = container_v1.ClusterManagerClient(credentials=config.gcloud.credentials)
         self.username = 'main-user'
-        self.namespace = 'edgar'
+        self.namespace = 'default'
         self.managed_namespace = 'ed'
         self.gke_cluster = None
         self.parent_path = f"projects/{config.gcloud.project}/locations/{config.gcloud.fq_zone}"
@@ -40,6 +40,7 @@ class GKECluster(Cluster):
                 oauth_scopes=[
                     'https://www.googleapis.com/auth/devstorage.read_only',
                 ],
+                service_account='main-722@edgar-research.iam.gserviceaccount.com',
             ),
             addons_config=container_v1.types.AddonsConfig(
                 http_load_balancing=container_v1.types.HttpLoadBalancing(
@@ -80,13 +81,6 @@ class GKECluster(Cluster):
             kubernetes.config.load_kube_config()
             kube_api = kubernetes.client.ApiClient()
             kube_v1 = kubernetes.client.CoreV1Api(kube_api)
-            kube_v1.create_namespace(
-                kubernetes.client.V1Namespace(
-                    metadata=kubernetes.client.V1ObjectMeta(
-                        name=self.namespace,
-                    ),
-                ),
-            )
             kube_v1.create_namespaced_service_account(
                 self.namespace,
                 kubernetes.client.V1ServiceAccount(

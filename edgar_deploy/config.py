@@ -22,9 +22,8 @@ class Config(object):
             config = yaml.load(f)
 
         self.gcloud = Struct()
-        self.gcloud.credentials = Credentials.from_service_account_file(
-            self.module_dir / config['gcloud']['service_account_file']
-        )
+        self.gcloud.service_account_file = self.module_dir / config['gcloud']['service_account_file']
+        self.gcloud.credentials = Credentials.from_service_account_file(self.gcloud.service_account_file)
         self.gcloud.project = config['gcloud']['project']
         self.gcloud.fq_zone = f"{config['gcloud']['region']}-{config['gcloud']['zone']}"
 

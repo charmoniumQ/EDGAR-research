@@ -1,8 +1,10 @@
 from .config import config
 import logging
+import base64
 import contextlib
 import docker
 import subprocess
+# https://github.com/kubernetes-client/python/blob/master/kubernetes/README.md
 import kubernetes
 from . import utils
 
@@ -13,32 +15,52 @@ def prepare_images():
 
     cluster_dir = config.project_dir / 'edgar_cluster'
     with utils.time_code(f'docker'):
-        for dockerfile in cluster_dir.glob('Dockerfile-*'):
-            name = dockerfile.name.split('-')[-1]
+        for dockerfolder in cluster_dir.glob('*'):
+            name = dockerfolder.name
             tag = f'gcr.io/{config.gcloud.project}/{name}:latest'
 
             # with utils.time_code(f'docker build {name}'):
-            client.images.build(
-                path=str(cluster_dir),
-                dockerfile=dockerfile,
+            output_gen = client.images.build(
+                path=str(dockerfolder),
                 tag=tag,
                 quiet=False,
                 nocache=False,
                 rm=False,
                 # TODO: does this need cache_from=[tag]
             )
+            for level, output in utils.flatten_gen(output_gen):
+                print(f'docker: {level * " "}{output}')
 
             # with utils.time_code(f'docker push {name}'):
             client.images.push(tag)
 
 
 @contextlib.contextmanager
-def deploy_kubernetes(kube_api, namespace, n_workers):
+def kubernetes_namespace(kube_api, namespace):
+    kube_v1 = kubernetes.client.CoreV1Api(kube_api)
+    kube_v1.create_namespace(
+        kubernetes.client.V1Namespace(
+            metadata=kubernetes.client.V1ObjectMeta(
+                name=namespace,
+            ),
+        ),
+    )
+    try:
+        yield
+    finally:
+        kube_v1.delete_namespace(
+            namespace,
+            body=kubernetes.client.V1DeleteOptions(
+                propagation_policy='Foreground',
+            ),
+        )
+
+
+def setup_kubernetes(kube_api, namespace, n_workers):
     ports = {
         'scheduler': 8786,
-        # 'dashboard': 8787,
+        'dashboard': 8787,
     }
-    scheduler_address = f'tcp://scheduler:{ports["scheduler"]}'
 
     kube_v1 = kubernetes.client.CoreV1Api(kube_api)
     kube_v1beta = kubernetes.client.ExtensionsV1beta1Api(kube_api)
@@ -49,13 +71,45 @@ def deploy_kubernetes(kube_api, namespace, n_workers):
     # TODO: include uninitialized
 
     with utils.time_code('kube deploy'):
-        kube_v1.create_namespace(
-            kubernetes.client.V1Namespace(
+        with open(config.gcloud.service_account_file, 'rb') as f:
+            service_account_data = base64.encodebytes(f.read()).decode()
+
+        kube_v1.create_namespaced_secret(
+            namespace,
+            kubernetes.client.V1Secret(
                 metadata=kubernetes.client.V1ObjectMeta(
-                    name=namespace,
-                ),
+                    name='service-account',
+                ),                
+                data={
+                    'key.json': service_account_data,
+                },
             ),
         )
+
+        secret_volume_mount = kubernetes.client.V1VolumeMount(
+            mount_path='/var/secrets/google',
+            name='service-account',
+        )
+        secret_volume = kubernetes.client.V1Volume(
+            name='service-account',
+            secret=kubernetes.client.V1SecretVolumeSource(
+                secret_name='service-account',
+            ),
+        )
+        env_vars = [
+            kubernetes.client.V1EnvVar(
+                name=name,
+                value=value,
+            ) for name, value in {
+                'GOOGLE_APPLICATION_CREDENTIALS': f'{secret_volume_mount.mount_path}/key.json',
+                'gcloud_project': config.gcloud.project,
+                'gcloud_topic': f'{namespace}-topic',
+                'gcloud_subscription': f'{namespace}-subscription-2',
+                'n_workers': str(n_workers),
+                'dask_scheduler_address': f'tcp://scheduler:{ports["scheduler"]}',
+            }.items()
+        ]
+
         kube_v1beta.create_namespaced_deployment(
             namespace,
             kubernetes.client.ExtensionsV1beta1Deployment(
@@ -86,17 +140,13 @@ def deploy_kubernetes(kube_api, namespace, n_workers):
                                         for name, port in ports.items()
                                     ],
                                     command=[
-                                        '/bin/sh', '-c', f'dask-scheduler --port {ports["scheduler"]} --no-bokeh | tee log', 
+                                        '/bin/sh', '-c', f'unbuffer dask-scheduler --port {ports["scheduler"]} --no-bokeh | unbuffer -p /app/update_status.py',
                                     ],
-                                    # readiness_probe=kubernetes.client.V1Probe(
-                                    #     _exec=kubernetes.client.V1ExecAction(
-                                    #         command=[
-                                    #             '/bin/sh', '-c', f"test {n_workers} -le $(grep 'Starting established connection' log | wc -l)",
-                                    #         ],
-                                    #     ),
-                                    # ),
+                                    volume_mounts=[secret_volume_mount],
+                                    env=env_vars,
                                 ),
                             ],
+                            volumes=[secret_volume],
                         ),
                     ),
                 ),
@@ -146,13 +196,16 @@ def deploy_kubernetes(kube_api, namespace, n_workers):
                                     name='worker',
                                     image=f'gcr.io/{config.gcloud.project}/worker:latest',
                                     command=[
-                                        '/bin/sh', '-c', f'dask-worker {scheduler_address} | tee log'
+                                        '/bin/sh', '-c', 'dask-worker ${dask_scheduler_address}'
                                         # TODO: memory management
                                         # TODO: nprocs
                                         # TODO: nthreads
                                     ],
+                                    volume_mounts=[secret_volume_mount],
+                                    env=env_vars,
                                 ),
                             ],
+                            volumes=[secret_volume],
                         ),
                     ),
                 ),
@@ -177,34 +230,20 @@ def deploy_kubernetes(kube_api, namespace, n_workers):
                                     name='job',
                                     image=f'gcr.io/{config.gcloud.project}/job:latest',
                                     command=[
-                                        'python3', '/work/test.py', scheduler_address,
-                                        # TODO: memory management
-                                        # TODO: nprocs
-                                        # TODO: nthreads
+                                        '/bin/sh', '-c', '/work/wait_for_scheduler.py && /work/test.py',
                                     ],
+                                    volume_mounts=[secret_volume_mount],
+                                    env=env_vars,
                                 ),
                             ],
+                            volumes=[secret_volume],
                         ),
                     ),
                 ),
                 # TODO: name specific to this instance
             ),
         )
-    yield
-    with utils.time_code('kube delete'):
-        delete_opts = kubernetes.client.V1DeleteOptions(
-            propagation_policy='Foreground'
-        )
-        kube_v1.delete_namespace(namespace, body=delete_opts)
 
-if __name__ == '__main__':
-    # kubectl --namespace dask delete deployments,services,jobs -l use=temporary
-    # prepare_images()
-    from .gke_cluster import GKECluster
-    g = GKECluster('test-cluster-1', load=True, save=False)
-    with g:
-        with deploy_kubernetes(g.kube_api, g.managed_namespace, g.nodecount):
-            print('done ish')
-            input()
-            # kubectl -n dask logs $(kubectl -n dask get -o 'jsonpath={.items[].metadata.name}' pods -l job-name=job)
-    # kubectl -n dask run -it --generator=run-pod/v1 --image gcr.io/edgar-research/worker test -- dask-worker tcp://scheduler.edgar-research.svc.cluster.local
+# kubectl -n ed logs $(kubectl -n ed get -o 'jsonpath={.items[].metadata.name}' pods -l deployment=scheduler)
+# kubectl -n ed logs $(kubectl -n ed get -o 'jsonpath={.items[].metadata.name}' pods -l job-name=job)
+# kubectl -n ed run -it --generator=run-pod/v1 --image gcr.io/edgar-research/worker test -- ed-worker tcp://scheduler.edgar-research.svc.cluster.local
