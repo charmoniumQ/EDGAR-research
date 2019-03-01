@@ -7,10 +7,8 @@ ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 RUN chmod +x /tini
 ENTRYPOINT ["/tini", "--"]
 
-# TODO: remove dnsutil
-RUN apt-get -y update && apt-get -y install gcc
+RUN apt-get -y update && apt-get -y install gcc g++ expect
 
-ADD requirements-job.txt /work/requirements-job.txt
-RUN pip3 install -r /work/requirements-job.txt
+RUN pip3 install dask[distributed] google-cloud-pubsub
 
-ADD test.py /work/test.py
+ADD update_status.py /app/update_status.py

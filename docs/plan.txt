@@ -1,0 +1,7 @@
+Write pub/sub thingy
+Test if pre-reqs needs to be installed
+Test if my code needs to be installed
+Move edgar_cluster into a Docker container
+Make edgar_deploy's config apply to edgar_cluster's
+Update S3 link
+Resurrect a script

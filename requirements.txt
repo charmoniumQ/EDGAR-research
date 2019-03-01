@@ -3,9 +3,6 @@
 # - deploy requirements
 
 # - master requirements
-dask
-dask[bag]
-tqdm
 
 # - worker requirements
 nltk
