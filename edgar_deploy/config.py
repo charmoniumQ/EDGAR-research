@@ -11,7 +11,7 @@ class Config(object):
     # I am justified in hardcoding instance variables, because this
     # could be replaced with a dynamic property.
     def __init__(self):
-        self.module_dir = Path(__loader__.path).parent
+        self.module_dir = Path(__loader__.path).parent.relative_to(Path.cwd())
         self.project_dir = self.module_dir.parent
 
         with open(self.module_dir / 'config.yaml', 'r') as f:
