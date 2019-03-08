@@ -1,35 +1,51 @@
 from .config import config
-from .cluster import Cluster
+from .provisioned_resource import FileProvisionedResource
 from . import utils
+from pathlib import Path
 import subprocess
+import itertools
 import base64
 import json
 import time
 import google
 # https://googleapis.github.io/google-cloud-python/latest/container/gapic/v1/api.html
-from google.cloud import container_v1
+import  google.cloud.container_v1
 # https://github.com/kubernetes-client/python/blob/master/kubernetes/README.md
 import kubernetes
 # import warnings
 # warnings.simplefilter("always")
 
 
-class GKECluster(Cluster):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.cluster_manager = container_v1.ClusterManagerClient(credentials=config.gcloud.credentials)
-        self.username = 'main-user'
-        self.namespace = 'default'
-        self.managed_namespace = 'ed'
-        self.gke_cluster = None
-        self.parent_path = f"projects/{config.gcloud.project}/locations/{config.gcloud.fq_zone}"
-        self.name_path = f"projects/{config.gcloud.project}/locations/{config.gcloud.fq_zone}/clusters/{self.name}"
+class GKECluster(FileProvisionedResource):
+    def __init__(self, nodecount=1, cache_dir=None, name=None):
+        self.nodecount = nodecount
+        self.name = name
+        self.name_path = f'projects/{config.gcloud.project}/locations/{config.gcloud.fq_zone}/clusters/{self.name}'
+        self.cluster_manager = google.cloud.container_v1.ClusterManagerClient()
+        self.provision_cluster()
+        self.wait_for_gke()
+        self.setup_kube_auth()
+        super().__init__(nodecount, cache_dir=cache_dir, name=name)
 
-    def _create(self):
-        self.gke_cluster = container_v1.types.Cluster(
+    def __getstate__(self):
+        # cluster_manager has a Channel and is not picklable
+        return utils.omit(self.__dict__, set(['cluster_manager', 'kube_api']))
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.cluster_manager = google.cloud.container_v1.ClusterManagerClient()
+        self.wait_for_gke()
+
+        # setup_kube auth has to be redone because this it affects external state
+        # merely unpickling the GKECluster will not restore the external state
+        self.setup_kube_auth()
+
+    @utils.time_code_decor()
+    def provision_cluster(self):
+        self.gke_cluster = google.cloud.container_v1.types.Cluster(
             name=self.name,
             initial_node_count=self.nodecount,
-            node_config=container_v1.types.NodeConfig(
+            node_config=google.cloud.container_v1.types.NodeConfig(
                 # Consider changing this for cost-effectiveness
                 machine_type='n1-standard-1',
                 # in GB, minimum is 10
@@ -42,136 +58,59 @@ class GKECluster(Cluster):
                 ],
                 service_account='main-722@edgar-research.iam.gserviceaccount.com',
             ),
-            addons_config=container_v1.types.AddonsConfig(
-                http_load_balancing=container_v1.types.HttpLoadBalancing(
+            addons_config=google.cloud.container_v1.types.AddonsConfig(
+                http_load_balancing=google.cloud.container_v1.types.HttpLoadBalancing(
                     disabled=True,
                 ),
-                horizontal_pod_autoscaling=container_v1.types.HorizontalPodAutoscaling(
+                horizontal_pod_autoscaling=google.cloud.container_v1.types.HorizontalPodAutoscaling(
                     disabled=True,
                 ),
-                kubernetes_dashboard=container_v1.types.KubernetesDashboard(
+                kubernetes_dashboard=google.cloud.container_v1.types.KubernetesDashboard(
                     disabled=True,
                 ),
-                network_policy_config=container_v1.types.NetworkPolicyConfig(
+                network_policy_config=google.cloud.container_v1.types.NetworkPolicyConfig(
                     disabled=True,
                 ),
             ),
         )
-        with utils.time_code('gke cluster create'):
-            self.cluster_manager.create_cluster(None, None, self.gke_cluster, parent=self.parent_path)
+        self.cluster_manager.create_cluster(None, None, self.gke_cluster, parent=str(Path(self.name_path).parent.parent))
 
-        with utils.time_code('gke cluster provision'):
-            while True:
-                self.gke_cluster = self.cluster_manager.get_cluster(None, None, None, name=self.name_path)
-                if self.gke_cluster.status == google.cloud.container_v1.enums.Cluster.Status.RUNNING.value:
-                    break
-                time.sleep(10)
+    @utils.time_code_decor()
+    def wait_for_gke(self):
+        self.name_path = str(self.name_path)
+        delays = itertools.chain([0, 5, 10], itertools.repeat(20))
+        for _ in map(time.sleep, delays):
+            self.gke_cluster = self.cluster_manager.get_cluster(None, None, None, name=self.name_path)
+            if self.gke_cluster.status == google.cloud.container_v1.enums.Cluster.Status.RUNNING.value:
+                break
 
-        # tried: https://banzaicloud.com/blog/pipeline-gke-rbac/
-        # tried: https://stackoverflow.com/a/48377444/1078199
-        # using: https://stackoverflow.com/questions/54410410/authenticating-to-gke-master-in-python/54534575#54534575
-        with utils.time_code('gcloud auth'):
-            subprocess.run([
-                'gcloud', '--quiet', 'container', 'clusters',
-                'get-credentials', self.gke_cluster.name,
-                '--region', self.gke_cluster.location
-            ], capture_output=True)
+    @utils.time_code_decor()
+    def setup_kube_auth(self):
+        subprocess.run([
+            'gcloud', '--quiet', 'container', 'clusters',
+            'get-credentials', self.gke_cluster.name,
+            '--region', self.gke_cluster.location
+        ], capture_output=True)
+        kubernetes.config.load_kube_config()
+        self.kube_api =  kubernetes.client.ApiClient()
 
-        with utils.time_code('kube setup'):
-            kubernetes.config.load_kube_config()
-            kube_api = kubernetes.client.ApiClient()
-            kube_v1 = kubernetes.client.CoreV1Api(kube_api)
-            kube_v1.create_namespaced_service_account(
-                self.namespace,
-                kubernetes.client.V1ServiceAccount(
-                    metadata=kubernetes.client.V1ObjectMeta(
-                        name=self.username,
-                    ),
-                ),
-            )
-
-            kube_rbac_authorization_v1 = kubernetes.client.RbacAuthorizationV1Api(kube_api)
-            kube_rbac_authorization_v1.create_namespaced_role_binding(
-                self.namespace,
-                kubernetes.client.V1RoleBinding(
-                    metadata=kubernetes.client.V1ObjectMeta(
-                        name=f'{self.username}-rolebinding',
-                    ),
-                    role_ref=kubernetes.client.V1RoleRef(
-                        api_group='rbac.authorization.k8s.io',
-                        kind='ClusterRole',
-                        name='cluster-admin',
-                    ),
-                    subjects=[
-                        kubernetes.client.V1Subject(
-                            kind='ServiceAccount',
-                            name=self.username,
-                            namespace=self.managed_namespace,
-                        ),
-                    ],
-                ),
-            )
-            service_account = kube_v1.read_namespaced_service_account(self.username, self.namespace)
-            secret = kube_v1.read_namespaced_secret(service_account.secrets[0].name, self.namespace)
-
-        self._configure_access(secret)
-
-    def _load(self):
-        try:
-            with utils.time_code('gke cluster list'):
-                self.gke_cluster = self.cluster_manager.get_cluster(None, None, None, name=self.name_path)
-        except google.api_core.exceptions.NotFound:
-            return False
-        else:
-            with utils.time_code('gcloud auth'):
-                subprocess.run([
-                    'gcloud', '--quiet', 'container', 'clusters',
-                    'get-credentials', self.gke_cluster.name,
-                    '--region', self.gke_cluster.location
-                ], capture_output=True)
-            with utils.time_code('kube load setup'):
-                kubernetes.config.load_kube_config()
-                kube_api = kubernetes.client.ApiClient()
-                kube_v1 = kubernetes.client.CoreV1Api(kube_api)
-                service_account = kube_v1.read_namespaced_service_account(self.username, self.namespace)
-                secret = kube_v1.read_namespaced_secret(service_account.secrets[0].name, self.namespace)
-            self._configure_access(secret)
-            return True
-
+    @utils.time_code_decor()
     def _delete(self):
         self.cluster_manager.delete_cluster(None, None, None, name=self.name_path)
         self.gke_cluster = None
-
-    def _configure_access(self, secret):
-        token = base64.decodebytes(secret.data['token'].encode())
-        self.kube_config = kubernetes.client.Configuration()
-        self.kube_config.verify_ssl = True
-        self.kube_config.api_key['authorization'] = token
-        self.kube_config.api_key_prefix['authorization'] = 'Bearer'
-
-        for logger in self.kube_config.logger.values():
-            logger.setLevel(config.logging_level)
-
-        self.kube_config.host = f'https://{self.gke_cluster.endpoint}'
-        self.kube_config.ssl_ca_cert = config.scratch_dir / 'ssl_ca_cert'
-        with open(self.kube_config.ssl_ca_cert, 'wb') as f:
-            f.write(base64.decodebytes(
-                self.gke_cluster.master_auth.cluster_ca_certificate.encode()
-            ))
-
-        # self.kube_config.cert_file = dire / 'cert_file'
-        # with self.kube_config.cert_file.open('wb') as f:
-        #     f.write(client_cert)
-
-        self.kube_api = kubernetes.client.ApiClient(configuration=self.kube_config)
-        self.kube_v1 = kubernetes.client.CoreV1Api(self.kube_api)
+        super()._delete()
 
 
 if __name__ == '__main__':
     from pprint import pprint
     import logging
     logging.basicConfig(level=logging.INFO)
-    g = GKECluster('test-cluster-1', load=True, save=False)
+    g = GKECluster.create_or_load(
+        nodecount=1,
+        cache_dir=config.cache_dir,
+        name='test-cluster-2',
+        should_save=True
+    )
     with g:
-        pods = g.kube_v1.list_namespaced_pod(g.namespace)
+        pods = kubernetes.client.CoreV1Api(g.kube_api).list_namespaced_pod('default')
         pprint(pods)

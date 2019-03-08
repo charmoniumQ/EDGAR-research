@@ -1,20 +1,24 @@
 from concurrent.futures import ThreadPoolExecutor
+from .config import config
 from .gke_cluster import GKECluster
-from .kubernetes_deploy import prepare_images, kubernetes_namespace, setup_kubernetes
+from .kubernetes_deploy import kubernetes_namespace, setup_kubernetes
+from .prepare_docker_images import prepare_docker_images
 
-#prepare_images = lambda: None
+prepare_docker_images()
+
 
 with ThreadPoolExecutor(max_workers=3) as executor:
-    cluster = GKECluster('test-cluster-2', load=True, save=True, nodecount=3)
-
-    images_fut = executor.submit(prepare_images)
-    cluster_fut = executor.submit(cluster.open)
-
-    images = images_fut.result()
-    cluster_fut.result()
+    cluster = GKECluster.create_or_load(
+        nodecount=1,
+        cache_dir=config.cache_dir,
+        name='test-cluster-2',
+        should_save=True
+    )
 
     with cluster:
-        with kubernetes_namespace(cluster.kube_api, cluster.managed_namespace):
-            setup_kubernetes(cluster.kube_api, cluster.managed_namespace, cluster.nodecount)
+        images = prepare_docker_images()
+        #bucket = create_storage()
+        with kubernetes_namespace(cluster.kube_api, 'eddy'):
+            setup_kubernetes(cluster.kube_api, 'eddy', cluster.nodecount, images)
             print('done ish')
             input()

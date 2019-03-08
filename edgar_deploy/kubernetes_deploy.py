@@ -1,38 +1,11 @@
 from .config import config
 import logging
+import os
 import base64
 import contextlib
-import docker
-import subprocess
 # https://github.com/kubernetes-client/python/blob/master/kubernetes/README.md
 import kubernetes
 from . import utils
-
-
-def prepare_images():
-    subprocess.run(['gcloud', '--quiet', 'auth', 'configure-docker'], capture_output=True)
-    client = docker.from_env()
-
-    cluster_dir = config.project_dir / 'edgar_cluster'
-    with utils.time_code(f'docker'):
-        for dockerfolder in cluster_dir.glob('*'):
-            name = dockerfolder.name
-            tag = f'gcr.io/{config.gcloud.project}/{name}:latest'
-
-            # with utils.time_code(f'docker build {name}'):
-            output_gen = client.images.build(
-                path=str(dockerfolder),
-                tag=tag,
-                quiet=False,
-                nocache=False,
-                rm=False,
-                # TODO: does this need cache_from=[tag]
-            )
-            for level, output in utils.flatten_gen(output_gen):
-                print(f'docker: {level * " "}{output}')
-
-            # with utils.time_code(f'docker push {name}'):
-            client.images.push(tag)
 
 
 @contextlib.contextmanager
@@ -56,7 +29,7 @@ def kubernetes_namespace(kube_api, namespace):
         )
 
 
-def setup_kubernetes(kube_api, namespace, n_workers):
+def setup_kubernetes(kube_api, namespace, n_workers, images):
     ports = {
         'scheduler': 8786,
         'dashboard': 8787,
@@ -71,7 +44,7 @@ def setup_kubernetes(kube_api, namespace, n_workers):
     # TODO: include uninitialized
 
     with utils.time_code('kube deploy'):
-        with open(config.gcloud.service_account_file, 'rb') as f:
+        with open(os.environ['GOOGLE_APPLICATION_CREDENTIALS'], 'rb') as f:
             service_account_data = base64.encodebytes(f.read()).decode()
 
         kube_v1.create_namespaced_secret(
@@ -134,7 +107,7 @@ def setup_kubernetes(kube_api, namespace, n_workers):
                             containers=[
                                 kubernetes.client.V1Container(
                                     name='scheduler',
-                                    image=f'gcr.io/{config.gcloud.project}/scheduler:latest',
+                                    image=images['scheduler'].result(),
                                     ports=[
                                         kubernetes.client.V1ContainerPort(container_port=port, name=name)
                                         for name, port in ports.items()
@@ -194,7 +167,7 @@ def setup_kubernetes(kube_api, namespace, n_workers):
                             containers=[
                                 kubernetes.client.V1Container(
                                     name='worker',
-                                    image=f'gcr.io/{config.gcloud.project}/worker:latest',
+                                    image=images['worker'].result(),
                                     command=[
                                         '/bin/sh', '-c', 'dask-worker ${dask_scheduler_address}'
                                         # TODO: memory management
@@ -228,7 +201,7 @@ def setup_kubernetes(kube_api, namespace, n_workers):
                             containers=[
                                 kubernetes.client.V1Container(
                                     name='job',
-                                    image=f'gcr.io/{config.gcloud.project}/job:latest',
+                                    image=images['job'].result(),
                                     command=[
                                         '/bin/sh', '-c', '/work/wait_for_scheduler.py && /work/test.py',
                                     ],
