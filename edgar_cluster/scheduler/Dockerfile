@@ -9,6 +9,6 @@ ENTRYPOINT ["/tini", "--"]
 
 RUN apt-get -y update && apt-get -y install gcc g++ expect
 
-RUN pip3 install dask[distributed] google-cloud-pubsub
+RUN pip3 install dask[distributed] google-cloud-storage
 
 ADD update_status.py /app/update_status.py

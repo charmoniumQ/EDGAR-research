@@ -38,7 +38,7 @@ save: determines if the resource gets saved on close.
         if self.opened:
             if not self.should_save:
                 logging.info(f'Deleted {type(self).__name__}')
-                self._delete()
+                self.delete()
             else:
                 logging.info(f'Saving {type(self).__name__}')
                 self.save()
@@ -124,8 +124,13 @@ If pickle is not desired at all, write a custom Subclass.save/Subclass.load meth
             name = fname.relative_to(name_dir).name
             yield name
 
+    @classmethod
+    def delete_all(Cls):
+        for name in Cls.list():
+            Cls.unlink()
 
-if __name__ == '__main__':
+
+def test():
     class CoolResource(FileProvisionedResource):
         @classmethod
         def _create2(Cls, *args, **kwargs):
@@ -144,3 +149,16 @@ if __name__ == '__main__':
         resource = CoolResource.create_or_load(cache_dir, name, should_save=False)
         print(f'{name} exists')
         resource.close()
+
+
+
+if __name__ == '__main__':
+    module_name = sys.argv[1]
+    class_name = sys.argv[2]
+    import importlib
+    module = importlib.__import__(module_name)
+    try:
+        Cls = getattr(module, class_name)
+    except AttributeError:
+        raise RuntimeError(f'{class_name} not found in {module_name}')
+    Cls.delete_all()

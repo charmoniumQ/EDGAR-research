@@ -40,7 +40,6 @@ class GKECluster(FileProvisionedResource):
         # merely unpickling the GKECluster will not restore the external state
         self.setup_kube_auth()
 
-    @utils.time_code_decor()
     def provision_cluster(self):
         self.gke_cluster = google.cloud.container_v1.types.Cluster(
             name=self.name,
@@ -81,10 +80,10 @@ class GKECluster(FileProvisionedResource):
         delays = itertools.chain([0, 5, 10], itertools.repeat(20))
         for _ in map(time.sleep, delays):
             self.gke_cluster = self.cluster_manager.get_cluster(None, None, None, name=self.name_path)
+            print(self.gke_cluster.status)
             if self.gke_cluster.status == google.cloud.container_v1.enums.Cluster.Status.RUNNING.value:
                 break
 
-    @utils.time_code_decor()
     def setup_kube_auth(self):
         subprocess.run([
             'gcloud', '--quiet', 'container', 'clusters',
@@ -95,10 +94,10 @@ class GKECluster(FileProvisionedResource):
         self.kube_api =  kubernetes.client.ApiClient()
 
     @utils.time_code_decor()
-    def _delete(self):
+    def delete(self):
         self.cluster_manager.delete_cluster(None, None, None, name=self.name_path)
         self.gke_cluster = None
-        super()._delete()
+        super().delete()
 
 
 if __name__ == '__main__':

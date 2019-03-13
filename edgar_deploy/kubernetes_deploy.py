@@ -29,8 +29,7 @@ def kubernetes_namespace(kube_api, namespace):
         )
 
 
-@utils.time_code_decor(print_start=False)
-def setup_kubernetes(kube_api, namespace, n_workers, images):
+def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_bucket):
     ports = {
         'scheduler': 8786,
         'dashboard': 8787,
@@ -76,8 +75,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images):
         ) for name, value in {
             'GOOGLE_APPLICATION_CREDENTIALS': f'{secret_volume_mount.mount_path}/key.json',
             'gcloud_project': config.gcloud.project,
-            'gcloud_topic': f'{namespace}-topic',
-            'gcloud_subscription': f'{namespace}-subscription-2',
+            'google_storage_bucket': google_storage_bucket,
             'n_workers': str(n_workers),
             'dask_scheduler_address': f'tcp://scheduler:{ports["scheduler"]}',
         }.items()
@@ -217,6 +215,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images):
         ),
     )
 
-# kubectl -n ed logs $(kubectl -n ed get -o 'jsonpath={.items[].metadata.name}' pods -l deployment=scheduler)
-# kubectl -n ed logs $(kubectl -n ed get -o 'jsonpath={.items[].metadata.name}' pods -l job-name=job)
-# kubectl -n ed run -it --generator=run-pod/v1 --image gcr.io/edgar-research/worker test -- ed-worker tcp://scheduler.edgar-research.svc.cluster.local
+# ns=$(kubectl get namespaces -o 'jsonpath={.items[*].metadata.name}' --field-selector 'status.phase==Active' | egrep 'edgar-[a-z]*' -o)
+# kubectl -n ${ns} logs $(kubectl -n ${ns} get -o 'jsonpath={.items[].metadata.name}' pods -l deployment=scheduler)
+# kubectl -n ${ns} logs $(kubectl -n ${ns} get -o 'jsonpath={.items[].metadata.name}' pods -l job-name=job)
+# kubectl -n ${ns} run -it --generator=run-pod/v1 --image gcr.io/edgar-research/worker test -- ed-worker tcp://scheduler.edgar-research.svc.cluster.local

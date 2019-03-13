@@ -17,6 +17,8 @@ class Config(object):
         with open(self.module_dir / 'config.yaml', 'r') as f:
             config = yaml.load(f)
 
+        self.name = config['name']
+
         self.gcloud = utils.Struct()
         self.gcloud.project = config['gcloud']['project']
         self.gcloud.fq_zone = f"{config['gcloud']['region']}-{config['gcloud']['zone']}"

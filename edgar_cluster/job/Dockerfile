@@ -9,7 +9,7 @@ ENTRYPOINT ["/tini", "--"]
 
 RUN apt-get -y update && apt-get -y install gcc g++
 
-RUN pip3 install dask[distributed] dask[bag] google-cloud-pubsub
+RUN pip3 install dask[distributed] dask[bag] google-cloud-storage
 
 ADD wait_for_scheduler.py /work/wait_for_scheduler.py
 ADD test.py /work/test.py
