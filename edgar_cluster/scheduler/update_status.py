@@ -22,7 +22,6 @@ add_worker = re.compile('Starting worker compute stream')
 for line in sys.stdin:
     print(line, end='')
     sys.stdout.flush()
-
     if add_worker.search(line):
         registered_n_workers += 1
         logging.info(f'registered another worker (x{registered_n_workers})')

@@ -21,6 +21,7 @@ class Config(object):
 
         self.gcloud = utils.Struct()
         self.gcloud.project = config['gcloud']['project']
+        self.gcloud.region = config['gcloud']['region']
         self.gcloud.fq_zone = f"{config['gcloud']['region']}-{config['gcloud']['zone']}"
         os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = str(self.module_dir / config['gcloud']['service_account_file'])
 

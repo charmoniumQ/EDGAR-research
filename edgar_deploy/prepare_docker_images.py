@@ -1,5 +1,6 @@
 import docker
 import subprocess
+import itertools
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from . import utils
@@ -29,19 +30,18 @@ def prepare_docker_image(dockerfolder):
 
     with utils.time_code(f'docker build/push {name}'):
         client = docker.from_env()
-        try:
-            output = list(client.images.build(
-                path=str(dockerfolder),
-                tag=tag,
-                quiet=False,
-                nocache=False,
-                rm=False,
-                # TODO: does this need cache_from=[tag]
-            ))
-        except Exception as e:
-            print('\n'.join(map(str, output)))
-            raise e
+
+        output = client.images.build(
+            path=str(dockerfolder),
+            tag=tag,
+            quiet=True,
+            nocache=False,
+            rm=True, # should this be False?
+            # TODO: does this need cache_from=[tag]
+        )[-1]
+
         client.images.push(tag)
+
         return tag
 
 

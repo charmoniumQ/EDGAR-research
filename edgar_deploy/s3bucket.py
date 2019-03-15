@@ -10,7 +10,9 @@ class S3Bucket(FileProvisionedResource):
     def __init__(self, name, *args, **kwargs):
         self.name = name
         self.client = google.cloud.storage.Client()
-        self.bucket = self.client.create_bucket(self.name)
+        self.bucket = self.client.bucket(self.name)
+        self.bucket.storage_class = "REGIONAL"
+        self.bucket.create(location=config.gcloud.region)
         super().__init__(*args, **kwargs, name=name)
 
     def delete(self):

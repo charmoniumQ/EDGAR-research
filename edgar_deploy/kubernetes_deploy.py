@@ -78,6 +78,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
             'google_storage_bucket': google_storage_bucket,
             'n_workers': str(n_workers),
             'dask_scheduler_address': f'tcp://scheduler:{ports["scheduler"]}',
+            'run_name': config.run_name,
         }.items()
     ]
 
@@ -151,13 +152,13 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                 replicas=n_workers,
                 selector=kubernetes.client.V1LabelSelector(
                     match_labels=dict(
-                        deployment='scheduler',
+                        deployment='worker',
                     )
                 ),
                 template=kubernetes.client.V1PodTemplateSpec(
                     metadata=kubernetes.client.V1ObjectMeta(
                         labels=dict(
-                            deployment='scheduler',
+                            deployment='worker',
                         ),
                     ),
                     spec=kubernetes.client.V1PodSpec(
@@ -201,7 +202,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                                 name='job',
                                 image=images['job'].result(),
                                 command=[
-                                    '/bin/sh', '-c', '/work/wait_for_scheduler.py && /work/test.py',
+                                    '/bin/sh', '-c', '/work/wait_for_scheduler.py && cd /work && python3 -m test',
                                 ],
                                 volume_mounts=[secret_volume_mount],
                                 env=env_vars,

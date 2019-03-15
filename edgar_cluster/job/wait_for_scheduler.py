@@ -16,10 +16,10 @@ status_blob = bucket.blob('status')
 
 while True:
     try:
-        status = status_blob.download_as_string()
+        status = status_blob.download_as_string().decode()
     except google.cloud.exceptions.NotFound:
-        status = None
-    logging.info(f'status = {status!r}')
-    if status == b'done':
+        status = ''
+    logging.info(f'status = {status}')
+    if status == 'done':
         break
     time.sleep(3)

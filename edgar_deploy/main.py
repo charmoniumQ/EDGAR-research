@@ -13,8 +13,8 @@ images = prepare_docker_images(cache_dir=config.cache_dir)
 cluster = GKECluster.create_or_load(
     nodecount=1,
     cache_dir=config.cache_dir,
-    name=f'{config.name}-2',
-    should_save=True,
+    name=f'{config.name}-1',
+    should_save=False,
 )
 
 
