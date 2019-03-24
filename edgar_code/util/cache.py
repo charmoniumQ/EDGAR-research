@@ -1,228 +1,298 @@
 import collections
 from pathlib import Path
+import logging
 import shutil
-import toolz
-import pickle
-import os
-from .fs_util import rand_names
+import random
+import string
+import abc
 
 
 # TODO: allow caching 'named objects'. Cache the name instead of the object.
 # TODO: allow caching objects by provenance. Cache the thing you did to make the object instead of the object.
 # https://github.com/bmabey/provenance
+# TODO: functools.wraps
+# TODO: make the obj_stores (list of obj_store factories) more intuitive, easier for developers to write
+
 
 class Cache(object):
-    def __init__(self, index, store, hit_msg=None, miss_msg=None, suffix=''):
+    @classmethod
+    def decor(Class, index, obj_stores, hit_msg=None, miss_msg=None, suffix=''):
+        '''Decorator that creates a cached function
+
+            @Cache.decor(index, store)
+            def foo():
+                pass
+
         '''
-        index must satisfy:
-            __contains__(key: hashable) -> bool
-            __setitem__(key: hashable, val: any)
-            __getitem__(key: hashable) -> any
-            __deltitem__(key: hashable)
-            clear()
-            set_name(name: str) # initializes the state of the index
+        def decor_(function):
+            return Class(index, obj_stores, function, hit_msg=None, miss_msg=None, suffix='')
+        return decor_
 
-        store must satisfy:
-            put(obj: any) -> your_key_type
-            get(key: your_key_type) -> any
-            remove(key: your_key_type)
-            set_name(name: str)
-            clear() # optional
+    def __init__(self, index, obj_stores, function, hit_msg=None, miss_msg=None, suffix=''):
+        '''Cache a function.
 
-        The index is a map from function_arguments -> key
-        The store is a map from key -> function_returned_object
-        where the key is determined entirely by the store.
+        The store is a map from key -> function_returned_object where
+        the key is determined entirely by the store, like a bag-check
+        system.
+
+        The index is a map from hashable function_arguments -> key (as
+        determined by store).
 
         This lets us have indirection: the index to the cache is stored
         separately from the (potentially large) objects in the cache.
 
-        If you do not need this indirection, just use NoStore() as the store.
+        If you do not need this indirection, just use NoStore() as the
+        store.
 
-        '{key}' in hit_msg and miss_msg will be replaced with the caller's args
-        and kwargs, while '{name}' gets replaced by the cache name
+        Note this uses `function.__qualname__` to determine the file
+        name. If this is not unique within your program, define
+        suffix.
 
-        Note this uses function.__name__ to determine the file name.
-        If this is not unique within your program, define suffix'''
-        self.index = index
-        self.store = store
+        Note this uses `function.version` when defined, so objects of
+        the same functions of different versions will not collide.
+
+        '''
+
+        self.function = function
+        self.name = '-'.join(filter(bool, [
+            self.function.__qualname__,
+            suffix,
+            getattr(self.function, 'version', ''),
+        ]))
+        self.index = index(self.name)
+        self.obj_stores = [
+            obj_store(self.name) for obj_store in obj_stores
+        ]
         self.hit_msg = hit_msg
         self.miss_msg = miss_msg
-        self.suffix = suffix
 
     def __call__(self, *args, **kwargs):
-        if hasattr(self, 'function'):
-            return self.cached_function(*args, **kwargs)
-        else:
-            return self.set_function(*args, **kwargs)
-
-    def set_function(self, function):
-        '''Gets called when the decorator is applied'''
-        self.function = function
-        self.name = function.__name__ + self.suffix
-        self.index.set_name(self.name)
-        self.store.set_name(self.name)
-        return self
-
-    def cached_function(self, *args, **kwargs):
-        '''gets called where the funciton would be called'''
         key = self.hashable_args(*args, **kwargs)
         if key in self.index:
             if self.hit_msg:
-                print(self.hit_msg
-                      .format(key=repr((args, kwargs)), name=self.name))
-            res = self.store.get(self.index[key])
+                logging.info(f'hit {name} with {key}')
+            res = self.store_get(self.index[key])
         else:
             if self.miss_msg:
-                print(self.miss_msg
-                      .format(key=repr((args, kwargs)), name=self.name))
+                logging.info(f'miss {name} with {key}')
             res = self.function(*args, **kwargs)
-            self.index[key] = self.store.put(res)
+            self.index[key] = self.store_put(res)
         return res
 
-    @classmethod
-    def hashable_args(Cls, *args, **kwargs):
+    def store_get(self, i_obj_store_key):
+        i, obj_store_key = i_obj_store_key
+        return self.obj_stores[i][obj_store_key]
+
+    def store_put(self, obj):
+        for i, obj_store in enumerate(self.obj_stores):
+            if obj_store.can_store(obj):
+                obj_store_key = obj_store.put(obj)
+                return (i, obj_store_key)
+        else:
+            raise TypeError(f'no obj_store for {obj!s}')
+
+    @staticmethod
+    def hashable_args(*args, **kwargs):
         return hashable((args, kwargs))
 
     def clear(self):
-        if hasattr(self.store, 'clear'):
-            self.store.clear()
+        '''Removes all cached items'''
+        for i, obj_store_key in self.index.values():
+            del self.obj_stores[i][obj_store_key]
+
+        if hasattr(self.index, 'clear'):
+            self.index.clear()
         else:
             for key in self.index:
-                self.store.remove(key)
-        self.index.clear()
+                del self.index[key]
 
-    def clear_item(self, *args, **kwargs):
-        key = self.hashable_args(*args, **kwargs)
-        if key in self.index:
-            self.store.remove(key)
-            del self.index[key]
-
-    def __repr__(self):
+    def __str__(self):
         index_type = type(self.index).__name__
-        if hasattr(self, 'function'):
-            return 'Cache of {self.name} with {index_type}' \
-                .format(**locals())
-        else:
-            return 'Unapplied decorator with {index_type}' \
-                .format(**locals())
+        store_type = type(self.obj_store).__name__
+        return f'Cache of {self.name} with {index_type} and {store_type}'
 
 
-class NoStore(object):
+class Store(abc.ABC):
+    Class = None
+    Key = None
+
+    @classmethod
+    def create(Class, *args, **kwargs) -> Class:
+        '''Curried init. Name will be applied later.'''
+        def create_(name):
+            return Class(*args, name=name, **kwargs)
+        return create_
+
+    def __init__(self, name) -> Key:
+        self.name = name
+
+    @abc.abstractmethod
+    def can_store(self, obj):
+        return False
+
+    @abc.abstractmethod
+    def put(self, obj):
+        '''stores the obj AND returns its key for later'''
+        pass
+
+    @abc.abstractmethod
+    def __getitem__(self, key: Key):
+        pass
+
+    @abc.abstractmethod
+    def __delitem__(self, key: Key):
+        '''clears one items from this store'''
+        pass
+
+    @abc.abstractmethod
+    def clear(self):
+        '''clears all items from this store'''
+        pass
+
+
+class NoStore(Store):
     '''Uses the objects as keys.
 
-    This has the effect that the index will end up storing the objects.'''
+    This has the effect that the index will end up storing the
+    objects.
 
-    def set_name(self, name):
-        self.name = name
+    '''
+
+    def __init__(self, name, can_store=None):
+        super().__init__(name)
+        self.can_store_ = can_store if can_store is not None else lambda obj: True
+
+    def can_store(self, obj):
+        return self.can_store_(obj)
 
     def put(self, obj):
         return obj
 
-    def get(self, key):
+    def __getitem__(self, key):
         return key
 
-    def remove(self, key):
+    def __delitem__(self, key):
         pass
 
     def clear(self):
         pass
 
 
-class PickleStore(object):
-    '''Use pickle to store the objects each as its own file in this directory.
+class FileStore(Store):
+    '''Store serialized objects as their own file.
 
     Good for large objects.
-    Stores at ./${PARENT_DIR}/${FUNCTION_NAME}/${RAND_STRING}'''
 
-    def __init__(self, parent_dir, gen_key=None):
-        self.parent_dir_ = pathify(parent_dir)
-        if gen_key is None:
-            self.gen_key = toolz.partial(rand_names, 20)
+    Stores at ./${PARENT_DIR}/${FUNCTION_NAME}/${RAND_STRING}
+
+    '''
+
+    def __init__(self, parent_dir, serializers, name):
+        super().__init__(name)
+        self.path = pathify(parent_dir) / self.name
+        self.path.mkdir(exist_ok=True, parents=True)
+        self.serializers = serializers
+
+    def find_serializer(self, obj):
+        for i, serializer in enumerate(self.serializers):
+            if hasattr(serializer, 'can_store'):
+                if serializer.can_store(obj):
+                    return i
+                else:
+                    continue
+            else:
+                return i
         else:
-            self.gen_key = gen_key
+            return -1
 
-    def set_name(self, name):
-        self.name = name
-        self.dir_ = self.parent_dir_ / name
+    def can_store(self, obj):
+        return self.find_serializer(obj) != -1
 
-    def get(self, key):
-        with (self.dir_ / key).open('rb') as f:
-            return pickle.load(f)
-
-    def get_unused_key(self):
-        for key in self.gen_key():
-            if not (self.dir_ / key).exists():
-                return key
+    def gen_key(self):
+        return rand_name()
 
     def put(self, obj):
-        if not self.dir_.exists():
-            self.dir_.mkdir(parents=True, exist_ok=True)
-        key = self.get_unused_key()
-        with (self.dir_ / key).open('wb') as f:
-            pickle.dump(obj, f)
-        return key
+        while True:
+            key = self.gen_key()
+            fname = self.path / key
+            if not fname.exists():
+                break
 
-    def remove(self, key):
-        fname = self.dir_ / key
+        i = self.find_serializer(obj)
+        with fname.open('wb') as f:
+            self.serializers[i].dump(obj, f)
+        return (i, fname)
+
+    def __getitem__(self, i_fname):
+        i, fname = i_fname
+        with fname.open('rb') as f:
+            return self.serializers[i].load(f)
+
+    def __delitem__(self, i_fname):
+        i, fname = i_fname
         if fname.exists():
-            if hasattr(fname, 'remove'):
-                # to make S3Paths work here
-                fname.remove()
-            else:
-                os.remove(str(fname))
+            fname.unlink()
 
     def clear(self):
-        if self.dir_.exists():
-            if hasattr(self.dir_, 'remove'):
-                # to make S3Paths work here
-                self.dir_.remove()
+        if self.path.exists():
+            if hasattr(self.path, 'rmtree'):
+                self.path.rmtree()
             else:
-                shutil.rmtree(str(self.dir_))
+                shutil.rmtree(self.path)
+        self.path.mkdir(parents=True)
 
 
-class CustomStore(PickleStore):
-    '''Like PickleStore, but overridable.
+class Index(abc.ABC):
+    @classmethod
+    def create(Class, *args, **kwargs):
+        def create_(name):
+            return Class(*args, name=name, **kwargs)
+        return create_
 
-    Classes wishing to use this should provide instance-method put and
-    class-method get. These will be called with the args and kwargs in
-    this class's __init__.'''
-
-    def __init__(self, path, gen_key=None, **kwargs):
-        super().__init__(path, gen_key)
-        self.kwargs = kwargs
-
-    def put(self, obj):
-        if hasattr(obj, 'put'):
-            # the key[0] will be type(obj), so that we can call
-            # key[0].get later
-            key = (type(obj), obj.put(**self.kwargs))
-        else:
-            # fall back to PickleStore
-            # the key[0] will indicate be None if we used pickle
-            key = (None, super().put(obj))
-        return key
-
-    def get(self, key):
-        if key[0] is not None:
-            # note that get  should be a classmethod
-            return key[0].get(key[1], **self.kwargs)
-        else:
-            return super().get(key[1])
-
-
-class IndexInRam(collections.UserDict):
-    '''An index with no persistence'''
-
-    # self.data references the real internal dict
-    def set_name(self, name):
+    def __init__(self, name):
         self.name = name
 
+    @abc.abstractmethod
+    def __setitem__(self, key, val):
+        pass
 
-class IndexInFile(collections.UserDict):
-    '''An index that persists at ./${DIR_}/${FUNCTION_NAME}_index'''
+    @abc.abstractmethod
+    def __getitem__(self, key):
+        pass
 
-    def __init__(self, dir_):
-        self.dir_ = pathify(dir_)
+    @abc.abstractmethod
+    def __delitem__(self, key):
+        pass
+
+    @abc.abstractmethod
+    def clear(self):
+        pass
+
+
+class IndexInRam(collections.UserDict, Index):
+    '''An index with no persistence'''
+    def __init__(self, name):
+        Index.__init__(self, name)
+        collections.UserDict.__init__(self)
+
+
+class IndexInFile(collections.UserDict, Index):
+    '''An index that persists at ./${PATH}/${FUNCTION_NAME}_index.pickle'''
+
+    def __init__(self, parent_dir, name, serializer=None):
+        Index.__init__(self, name)
+        if serializer is None:
+            import pickle
+            serializer = pickle
+        self.serializer = serializer
+        self.path = pathify(parent_dir) / (name + '_index.pickle')
+
+        if self.path.exists():
+            with self.path.open('rb') as f:
+                self.data = self.serializer.load(f)
+        else:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            self.data = {}
 
     def __setitem__(self, key, val):
         super().__setitem__(key, val)
@@ -232,28 +302,25 @@ class IndexInFile(collections.UserDict):
         super().__delitem__(key)
         self.dump()
 
-    def set_name(self, name):
-        self.fname = self.dir_ / (name + '_index')
-
-        if self.fname.exists():
-            with self.fname.open('rb') as f:
-                self.data = pickle.load(f)
-        else:
-            self.data = {}
-
     def dump(self):
-        self.dir_.mkdir(parents=True, exist_ok=True)
-        with self.fname.open('wb') as f:
-            pickle.dump(self.data, f)
+        with self.path.open('wb') as f:
+            self.serializer.dump(self.data, f)
 
     def clear(self):
         super().clear()
-        if self.fname.exists():
-            if hasattr(self.fname, 'remove'):
-                # to make S3Paths work here
-                self.fname.remove()
-            else:
-                os.remove(str(self.fname))
+        if self.path.exists():
+            self.path.unlink()
+
+
+def rand_name(n=10):
+    return ''.join(random.choice(string.ascii_lowercase + string.ascii_uppercase) for _ in range(n))
+
+
+def unused_file(directory):
+    while True:
+        fname = directory / rand_name()
+        if fname.exists():
+            return fname
 
 
 def hashable(obj):
@@ -269,33 +336,33 @@ def hashable(obj):
             # turn iterables into tuples
             return tuple(hashable(val) for val in obj)
         else:
-            raise TypeError("I don't know how to hash {obj} ({type})"
-                            .format(type=type(obj), obj=obj))
+            raise TypeError(f"I don't know how to hash {obj} ({type(obj)})")
     else:
         return obj
 
 
 def pathify(obj):
-    if type(obj) is str:
+    if isinstance(obj, (str, bytes)):
         return Path(obj)
     else:
         return obj
 
 
 if __name__ == '__main__':
+    import shutil
     calls = []
 
-    @Cache(IndexInRam(), NoStore())
+    @Cache.decor(IndexInRam.create(), [NoStore.create()])
     def square1(x):
         calls.append(x)
         return x**2
 
-    @Cache(IndexInFile('cache/'), NoStore())
+    @Cache.decor(IndexInFile.create('cache/'), [NoStore.create()])
     def square2(x):
         calls.append(x)
         return x**2
 
-    @Cache(IndexInFile('cache2/'), CustomStore('cache2/', None))
+    @Cache.decor(IndexInFile.create('cache/'), [FileStore.create('cache/', [pickle])])
     def square3(x):
         calls.append(x)
         return x**2
@@ -313,4 +380,3 @@ if __name__ == '__main__':
         assert calls == [7, 2, 7]
 
     shutil.rmtree('cache')
-    shutil.rmtree('cache2')
