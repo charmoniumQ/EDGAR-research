@@ -19,11 +19,11 @@ def main(year, qtr, filterer, dir_):
         starting_fname = sanitize_fname(record.company_name)
         fname = unused_fname(dir_, starting_fname).with_suffix('.txt')
         if director:
-            print('{record.company_name} -> {fname.name}'.format(**locals()))
+            print(f'{record.company_name} -> {fname.name}')
             with fname.open('w') as f:
               f.write(director)
         else:
-            print('No departure of directors for {record.company_name}'.format(**locals()))
+            print(f'No departure of directors for {record.company_name}')
 
 
 if __name__ == '__main__':

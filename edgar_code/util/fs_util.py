@@ -20,9 +20,11 @@ def unused_fname(dire, fname, suffix):
     # TODO: make this more general, eliminate duplicated code
 
     def candidates():
-        yield dire / fname  # try just dire/fname
+        # try just dire/fname
+        yield dire / fname
         for n in itertools.count(1):
-            yield dire / '{fname}_{n}.{suffix}'.format(**locals)  # otherwise add n
+            # otherwise add n
+            yield dire / f'{fname}_{n}.{suffix}'
 
     for try_fname in candidates():
         if not try_fname.exists():

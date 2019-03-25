@@ -21,11 +21,11 @@ def main(year, qtr, filterer, dir_):
     for record, rf in rfs.compute():
         fname = sanitize_unused_fname(dir_, record.company_name, 'txt')
         if rf:
-            print('{record.company_name} -> {fname.name}'.format(**locals()))
+            print(f'{record.company_name} -> {fname.name}')
             with fname.open('w') as f:
               f.write(rf)
         else:
-            print('No risk factor for {record.company_name'.format(**locals()))
+            print(f'No risk factor for {record.company_name}')
 
 
 @toolz.curry

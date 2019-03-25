@@ -13,7 +13,7 @@ def main(year, qtr, dir_):
     pbar.register()
     for record, rf in rfs.compute():
         fname = sanitize_unused_fname(dir_, record.company_name, 'txt')
-        print('{record.company_name} -> {fname.name}'.format(**locals()))
+        print(f'{record.company_name} -> {fname.name}')
         with fname.open('w', encoding='utf-8') as f:
             if rf:
                 record_ = dict(**record._asdict())

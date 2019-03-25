@@ -13,7 +13,7 @@ def time_code(msg=None):
         time = stop - start
         dct['time'] = time
         if msg:
-            print('{time!s}: {msg}'.format(**locals()))
+            print(f'{time!s}: {msg}')
 
 
 def add_time(func):

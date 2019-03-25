@@ -28,7 +28,7 @@ def main(year, n, ciks, dir_):
     for index in tqdm(chosen_indexes, desc='parsing rf'):
         fname = sanitize_fname(index.company_name)
         fname = unused_fname(dir_, fname).with_suffix('.html')
-        output.append('{index.company_name} -> {fname.name}'.format(**locals()))
+        output.append(f'{index.company_name} -> {fname.name}')
         rf = index_to_rf(index)
         if rf:
             with fname.open('w') as f:
@@ -52,11 +52,11 @@ def main(year, n, ciks, dir_):
                     f.write('<table>\n')
                     f.write('<tr>\n')
                     for stem, freq in stem_counts.most_common(20):
-                        f.write('<td>{stem}</td>'.format(**locals()))
+                        f.write(f'<td>{stem}</td>')
                     f.write('</tr>\n')
                     f.write('<tr>\n')
                     for stem, freq in stem_counts.most_common(20):
-                        f.write('<td>{freq}</td>'.format(**locals()))
+                        f.write(f'<td>{freq}</td>')
                     f.write('</tr>\n')
                     f.write('</table>\n')
                 f.write('</body></html>\n')

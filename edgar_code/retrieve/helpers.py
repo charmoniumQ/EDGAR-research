@@ -47,7 +47,7 @@ def find_form(fileinfos, form_type):
 def is_html(text):
     tags = 'p div td'.split(' ')
     tags += [tag.upper() for tag in tags]
-    return any('</{tag}>'.format(**locals()) in text
+    return any(f'</{tag}>' in text
                for tag in tags)
 
 
@@ -64,9 +64,9 @@ def clean_html(html):
     newline_tags = 'p div tr br h1 h2 h3 h4 h5'.split(' ')
     newline_tags += [tag.upper() for tag in newline_tags]
     for tag in newline_tags:
-        find1 = '</{tag}>'.format(**locals())
-        find2 = '<{tag} />'.format(**locals())
-        replace = 'my-escape-newlines\n</{tag}>'.format(**locals())
+        find1 = f'</{tag}>'
+        find2 = f'<{tag} />'
+        replace = f'my-escape-newlines\n</{tag}>'
         html = html.replace(find1, replace)
         html = html.replace(find2, replace)
 
@@ -131,7 +131,7 @@ def clean_text(text):
 
     # turn bullet-point + whitespace into space
     bullets = '([\u25cf\u00b7\u2022\x95])'
-    text = re.sub(r'\s+{bullets}\s+'.format(**locals()), ' ', text)
+    text = re.sub(fr'\s+{bullets}\s+', ' ', text)
     # TODO: add punctuation if punctuation is not at the end
 
     #### filter semantic spaces ####
@@ -184,7 +184,7 @@ def main_text_to_form_items(text, items):
         if isinstance(item, tuple):
             search_term = item[0]
         else:
-            search_term = r'(?im)^{item}.*?$'.format(**locals())
+            search_term = fr'(?im)^{item}.*?$'
         item_match = re.search(search_term, text)
 
         if item_match is None:
@@ -202,7 +202,7 @@ def main_text_to_form_items(text, items):
             if isinstance(next_item, tuple):
                 next_search_term = next_item[0]
             else:
-                next_search_term = r'(?im)^{next_item}'.format(**locals())
+                next_search_term = fr'(?im)^{next_item}'
             next_item_match = re.search(next_search_term, text)
 
             if next_item_match is not None:

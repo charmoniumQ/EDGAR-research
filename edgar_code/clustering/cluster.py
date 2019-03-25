@@ -27,7 +27,7 @@ class FeatureSelector(object):
         # old_shape = matrix.shape
         # matrix = selector.fit_transform(matrix)
         # new_shape = matrix.shape
-        # print('{old_shape} -> {new_shape}'.format(**locals()))
+        # print(f'{old_shape} -> {new_shape}')
 
 
 def select_features(words, matrix, dims=600, stop_words=0.8, clusters=20, keywords=30):
@@ -49,7 +49,7 @@ def select_features(words, matrix, dims=600, stop_words=0.8, clusters=20, keywor
         matrix = lsa.fit_transform(matrix)
         new_shape = matrix.shape
         exp_var = lsa.explained_variance_ratio_.sum() * 100
-        print("Explained variance of the SVD step: {exp_var:1f}% ({old_shape} -> {new_shape})".format(**locals()))
+        print(f"Explained variance of the SVD step: {exp_var:1f}% ({old_shape} -> {new_shape})")
 
 	# TODO: crossval cluster number
     with timer('kmeans'):

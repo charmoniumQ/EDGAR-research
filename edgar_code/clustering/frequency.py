@@ -128,7 +128,7 @@ def save_(path, thing):
         with path.open('w') as f:
             for i, (word, n) in enumerate(thing.most_common()):
                 freq = n / sum_
-                f.write('{i:d},{n:d},{freq:.12e},{word}\n'.format(**locals()))
+                f.write(f'{i:d},{n:d},{freq:.12e},{word}\n')
     elif isinstance(thing, list):
         append = path.exists()
         with path.open('a') as f:

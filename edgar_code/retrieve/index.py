@@ -32,13 +32,13 @@ def download_indexes(form_type, year, qtr):
 
 def download_index_lines(year, qtr):
     index_type = 'form'
-    url = 'https://www.sec.gov/Archives/edgar/full-index/{year}/QTR{qtr}/{index_type}.zip'.format(**locals()) # noqa
+    url = f'https://www.sec.gov/Archives/edgar/full-index/{year}/QTR{qtr}/{index_type}.zip'
     compressed_file = urllib.request.urlopen(url).read()
     compressed_file = io.BytesIO(compressed_file)
 
     # unzip the file
     with zipfile.ZipFile(compressed_file, 'r') as index_zip:
-        uncompressed_file = index_zip.open('{index_type}.idx'.format(**locals()))
+        uncompressed_file = index_zip.open(f'{index_type}.idx')
         return uncompressed_file
 
 

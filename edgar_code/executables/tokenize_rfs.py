@@ -33,17 +33,17 @@ def main(year, qtr, dir_):
 
         starting_fname = sanitize_fname(record.company_name)
         fname = unused_fname(dir_, starting_fname).with_suffix('.txt')
-        print('{record.company_name} -> {fname.name}'.format(**locals()))
+        print(f'{record.company_name} -> {fname.name}')
         with fname.open('w', encoding='utf-8') as f:
             record_ = dict(**record._asdict())
             record_['date_filed'] = str(record_['date_filed'])
             f.write(json.dumps(record_))
             f.write('\n')
             for word, freq in sc.most_common(100):
-                f.write('{freq},{word}\n'.format(**locals()))
+                f.write(f'{freq},{word}\n')
             f.write('\n')
             for word, freq in wc.most_common(100):
-                f.write('{freq},{word}\n'.format(**locals()))
+                f.write(f'{freq},{word}\n')
 
 
 if __name__ == '__main__':
