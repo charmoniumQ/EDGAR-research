@@ -8,11 +8,11 @@ class BucketWait(object):
         self.bucket = self.storage_client.get_bucket(bucket_name)
 
     def trigger(self, key, value=b'done'):
-        value_blob = bucket.blob(f'wait/{key!s}')
+        value_blob = self.bucket.blob(f'wait/{key!s}')
         value_blob.upload_from_string(key, value)
 
     async def wait(self, key, value_check=None, delay=4):
-        value_blob = bucket.blob(f'wait/{key!s}')
+        value_blob = self.bucket.blob(f'wait/{key!s}')
         while True:
             try:
                 value = value_blob.download_as_string().decode()

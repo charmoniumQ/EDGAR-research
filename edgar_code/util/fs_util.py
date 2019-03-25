@@ -6,7 +6,6 @@ import random
 import string
 
 
-BOX_PATH = [Path('../Box Sync/EDGAR Team'), Path('~/Box Sync/EDGAR Team').expanduser(), Path('~/box/EDGAR Team').expanduser(), Path('~/Documents/EDGAR Team').expanduser(), ]
 RESULTS = Path('results')
 
 

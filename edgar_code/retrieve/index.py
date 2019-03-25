@@ -5,8 +5,6 @@ import urllib.request
 import zipfile
 import io
 from edgar_code.cloud import KVBag
-import sys
-sys.path.insert(0, '/home/sam/Documents/src/dask')
 import dask.bag
 
 
@@ -29,9 +27,7 @@ def download_indexes(form_type, year, qtr):
     col_names = parse_header(lines)
     indexes = parse_body(year, qtr, lines, col_names)
     relevant_indexes = filter_form_type(indexes, form_type)
-    bag = dask.bag.from_sequence(relevant_indexes)
-    kvbag = KVBag.from_keys(bag)
-    return kvbag
+    return dask.bag.from_sequence(relevant_indexes)
 
 
 def download_index_lines(year, qtr):
@@ -128,3 +124,12 @@ def split(line):
         elems.insert(1, '')
 
     return elems
+
+
+if __name__ == '__main__':
+    import itertools
+    for row in itertools.islice(download_indexes_lazy('10-K', 2008, 2), 10):
+        print(row)
+    print()
+    for row in download_indexes('10-K', 2008, 2).compute()[:10]:
+        print(row)

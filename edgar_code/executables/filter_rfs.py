@@ -13,7 +13,7 @@ def main(year, qtr, filterer, dir_):
     indexes = filterer(indexes)
 
     # cluster computing part
-    rfs = indexes.map_values(index_to_rf)
+    rfs = KVBag.from_keys(indexes).map_values(index_to_rf)
 
     # collect and store locally
     pbar = ProgressBar()
@@ -30,7 +30,7 @@ def main(year, qtr, filterer, dir_):
 
 @toolz.curry
 def pick_n(indexes, n):
-    return KVBag(dask.bag.from_sequence(random.sample(indexes.compute(), n)))
+    return dask.bag.from_sequence(random.sample(indexes.compute(), n))
 
 
 if __name__ == '__main__':

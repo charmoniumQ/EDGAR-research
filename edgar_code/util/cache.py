@@ -144,10 +144,9 @@ class Store(abc.ABC):
         '''clears one items from this store'''
         pass
 
-    @abc.abstractmethod
-    def clear(self):
-        '''clears all items from this store'''
-        pass
+    # def clear(self):
+    #     '''clears all items from this store'''
+    #     pass
 
 
 class NoStore(Store):
@@ -187,26 +186,17 @@ class FileStore(Store):
 
     '''
 
-    def __init__(self, parent_dir, serializers, name):
+    def __init__(self, parent_dir, name, serializer=None):
+        if serializer is None:
+            import pickle
+            serializer = pickle
         super().__init__(name)
         self.path = pathify(parent_dir) / self.name
         self.path.mkdir(exist_ok=True, parents=True)
-        self.serializers = serializers
-
-    def find_serializer(self, obj):
-        for i, serializer in enumerate(self.serializers):
-            if hasattr(serializer, 'can_store'):
-                if serializer.can_store(obj):
-                    return i
-                else:
-                    continue
-            else:
-                return i
-        else:
-            return -1
+        self.serializer = serializer
 
     def can_store(self, obj):
-        return self.find_serializer(obj) != -1
+        return True
 
     def gen_key(self):
         return rand_name()
@@ -218,18 +208,15 @@ class FileStore(Store):
             if not fname.exists():
                 break
 
-        i = self.find_serializer(obj)
         with fname.open('wb') as f:
-            self.serializers[i].dump(obj, f)
-        return (i, fname)
+            self.serializer.dump(obj, f)
+        return fname
 
-    def __getitem__(self, i_fname):
-        i, fname = i_fname
+    def __getitem__(self, fname):
         with fname.open('rb') as f:
-            return self.serializers[i].load(f)
+            return self.serializer.load(f)
 
-    def __delitem__(self, i_fname):
-        i, fname = i_fname
+    def __delitem__(self, fname):
         if fname.exists():
             fname.unlink()
 
@@ -362,7 +349,7 @@ if __name__ == '__main__':
         calls.append(x)
         return x**2
 
-    @Cache.decor(IndexInFile.create('cache/'), [FileStore.create('cache/', [pickle])])
+    @Cache.decor(IndexInFile.create('cache/'), [FileStore.create('cache/')])
     def square3(x):
         calls.append(x)
         return x**2

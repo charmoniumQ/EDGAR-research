@@ -1,6 +1,5 @@
 import random
-from six.moves.html_parser import HTMLParser
-# from bs4 import BeautifulSoup
+from html.parser import HTMLParser
 import itertools
 import re
 

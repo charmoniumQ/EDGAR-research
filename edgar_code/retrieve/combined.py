@@ -1,6 +1,6 @@
 import toolz
-from ..cloud import get_s3path
-from ..util.cache import Cache, IndexInFile, CustomStore
+from ..cloud import cache_path, BagStore, KVBag
+from ..util.cache import Cache, IndexInFile, FileStore
 from .index import download_indexes
 from .form import index_to_form_text, form_text_to_main_text, main_text_to_form_items
 from .rf import form_items_to_rf
@@ -13,29 +13,33 @@ from .directors import form_items_to_directors
 # more logical sense that the caller in edgar_code.executables sets the cache
 # path and S3 credentials.
 
-index_cache = get_s3path('cache', 'cache')
-object_cache = get_s3path('cache', 'cache')
+
+#cache_decor = Cache.decor(IndexInFile.create(cache_path / 'index'), [BagStore.create(cache_path / 'bag')])
+cache_decor = lambda x: x
 
 
-@Cache(IndexInFile(index_cache), CustomStore(object_cache, None, dir_=object_cache), 'hit {name} with {key}', 'miss {name} with {key}')
+@cache_decor
 def indexes_for(form_type, year, qtr):
-    return download_indexes(form_type, year, qtr)
+    return KVBag.from_bag(
+        download_indexes(form_type, year, qtr)
+        .map(lambda index_row: (index_row, index_row))
+    )
 
 
-@Cache(IndexInFile(index_cache), CustomStore(object_cache, None, dir_=object_cache), 'hit {name} with {key}', 'miss {name} with {key}')
+@cache_decor
 def form_texts_for(form_type, year, qtr):
     return indexes_for(form_type, year, qtr) \
         .map_values(index_to_form_text(form_type))
 
 
 # TODO: remove this extraneous cache
-@Cache(IndexInFile(index_cache), CustomStore(object_cache, None, dir_=object_cache), 'hit {name} with {key}', 'miss {name} with {key}')
+@cache_decor
 def main_texts_for(form_type, year, qtr):
     return form_texts_for(form_type, year, qtr) \
         .map_values(form_text_to_main_text(form_type))
 
 
-@Cache(IndexInFile(index_cache), CustomStore(object_cache, None, dir_=object_cache), 'hit {name} with {key}', 'miss {name} with {key}')
+@cache_decor
 def form_itemss_for(form_type, year, qtr):
     '''
     :return: bag of dictionaries where each dict has a form-heading as its key, and the text of that form-heading as its value.
@@ -46,7 +50,7 @@ def form_itemss_for(form_type, year, qtr):
         .map_values(main_text_to_form_items(form_type))
 
 
-@Cache(IndexInFile(index_cache), CustomStore(object_cache, None, dir_=object_cache), 'hit {name} with {key}', 'miss {name} with {key}')
+@cache_decor
 def rfs_for(year, qtr):
     return form_itemss_for('10-K', year, qtr) \
         .map_values(form_items_to_rf)
