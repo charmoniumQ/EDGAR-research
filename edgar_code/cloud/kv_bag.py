@@ -7,10 +7,16 @@ class KVBag(dask.bag.Bag):
         return Class.from_bag(dask.bag.read_text(*args, **kwargs))
 
     def map_values(self, func):
-        return self.map(lambda pair: (pair[0], func(pair[1])))
+        def mapper(pair):
+            return (pair[0], func(pair[1]))
+        mapper.__name__ = f'KVBag.map({func.__name__})'
+        return self.map(mapper)
 
     def filter_values(self, func):
-        return self.filter(lambda pair: func(pair[1]))
+        def filterer(pair):
+            return func(pair[1])
+        mapper.__name__ = f'KVBag.filter({func.__name__})'
+        return self.filter(filterer)
 
     # modify to return subclass
 

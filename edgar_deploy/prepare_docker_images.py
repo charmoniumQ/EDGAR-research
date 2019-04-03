@@ -57,13 +57,14 @@ def prepare_docker_image_cached(dockerfolder, cache_dir):
                 with open(cache_file, 'r') as f:
                     return f.read()
             else:
-                logging.info(f'{dockerfolder} new; building fresh image')
+                pass
     else:
         cache_file = None
 
     tag = prepare_docker_image(dockerfolder)
 
     if cache_file is not None:
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
         with open(cache_file, 'w') as f:
             f.write(tag)
 

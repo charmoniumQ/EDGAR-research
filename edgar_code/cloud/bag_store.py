@@ -7,18 +7,23 @@ import random
 import string
 
 
-# TODO: put this in its own module
-# TODO: make sure this stores partitions in gs, returns URLs, which are stored in gs in the index. NOT in an obj store and the index.
+def rand_name(n=20):
+    return ''.join(random.choice(string.ascii_letters) for _ in range(20))
+
+
+# TODO: make sure this stores partitions in gs, returns URLs, which
+# are stored in gs in the index. NOT in an obj store and the index.
+
 class BagStore(cache.Store):
     def __init__(self, parent_path, name, serializer=None):
         super().__init__(name)
         self.parent_path = parent_path
-        self.serializer = serializer if serializer is None else pickle
+        self.serializer = serializer if serializer is not None else pickle
 
     def can_store(self, obj):
         return hasattr(obj, 'map_partitions')
 
-    def put(self, obj):
+    def put(self, bag):
         while True:
             key = rand_name()
             bag_path = self.parent_path / key
@@ -26,7 +31,9 @@ class BagStore(cache.Store):
                 break
         items_path = (
             bag
-            .map_partitions(toolz.partial(self.dump_partition, bag_path=bag_path))
+            .map_partitions(
+                toolz.partial(self.dump_partition, bag_path=bag_path)
+            )
             .compute()
         )
         bag_type = type(bag)
@@ -35,8 +42,7 @@ class BagStore(cache.Store):
     def dump_partition(self, partition, bag_path):
         partition_path = bag_path / rand_name(20) # pray for no collisions
         with partition_path.open('wb') as f:
-            print(partition)
-            self.serializer.dump(partition, f)
+            self.serializer.dump(list(partition), f)
         return partition_path
 
     def __getitem__(self, key):
@@ -51,7 +57,7 @@ class BagStore(cache.Store):
             partition = []
             with item_path.open('rb') as f:
                 partition.extend(self.serializer.load(f))
-            print(partition)
+            # print('load_partition', partition)
         return partition
 
     def __delitem__(self, key):

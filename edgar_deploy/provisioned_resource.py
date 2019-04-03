@@ -5,6 +5,12 @@ import pickle
 from . import utils
 
 
+# TODO: make this work with async
+# I want to be able to use this on a class where .create and .load are async
+# Creating or loading resources often has opportunity asynchrony or possibly concurrency
+# Since the same is true of deleting, I might want an async context-manager.
+
+
 class ProvisionedResource(abc.ABC):
     '''
 A superclass for resources whose provisioning is expensive.
@@ -153,6 +159,7 @@ def test():
 
 
 if __name__ == '__main__':
+    import sys
     module_name = sys.argv[1]
     class_name = sys.argv[2]
     import importlib

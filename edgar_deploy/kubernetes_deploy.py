@@ -29,6 +29,7 @@ def kubernetes_namespace(kube_api, namespace):
         )
 
 
+@utils.time_code_decor(print_start=False)
 def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_bucket):
     ports = {
         'scheduler': 8786,
@@ -79,6 +80,8 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
             'n_workers': str(n_workers),
             'dask_scheduler_address': f'tcp://scheduler:{ports["scheduler"]}',
             'run_name': config.run_name,
+            'run_module': 'edgar_code.executables.get_all_rfs',
+            'namespace': namespace
         }.items()
     ]
 
@@ -112,7 +115,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                                     for name, port in ports.items()
                                 ],
                                 command=[
-                                    '/bin/sh', '-c', f'unbuffer dask-scheduler --port {ports["scheduler"]} --no-bokeh | unbuffer -p /app/update_status.py',
+                                    '/bin/sh', '-c', f'unbuffer dask-scheduler --port {ports["scheduler"]} | unbuffer -p /app/update_status.py',
                                 ],
                                 volume_mounts=[secret_volume_mount],
                                 env=env_vars,
@@ -168,13 +171,19 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                                 name='worker',
                                 image=images['worker'].result(),
                                 command=[
-                                    '/bin/sh', '-c', 'dask-worker ${dask_scheduler_address}'
+                                    '/bin/sh', '-c', 'dask-worker ${dask_scheduler_address}',
                                     # TODO: memory management
                                     # TODO: nprocs
                                     # TODO: nthreads
                                 ],
                                 volume_mounts=[secret_volume_mount],
                                 env=env_vars,
+                                resources=kubernetes.client.V1ResourceRequirements(
+                                    requests=dict(
+                                        cpu='400m',
+                                        memory='1.5Gi',
+                                    ),
+                                ),
                             ),
                         ],
                         volumes=[secret_volume],
@@ -202,7 +211,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                                 name='job',
                                 image=images['job'].result(),
                                 command=[
-                                    '/bin/sh', '-c', '/work/wait_for_scheduler.py && cd /work && python3 -m test',
+                                    '/bin/sh', '-c', '/work/wait_for_scheduler.py && cd /work && /work/runner.py',
                                 ],
                                 volume_mounts=[secret_volume_mount],
                                 env=env_vars,
@@ -217,6 +226,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
     )
 
 # ns=$(kubectl get namespaces -o 'jsonpath={.items[*].metadata.name}' --field-selector 'status.phase==Active' | egrep 'edgar-[a-z]*' -o)
-# kubectl -n ${ns} logs $(kubectl -n ${ns} get -o 'jsonpath={.items[].metadata.name}' pods -l deployment=scheduler)
-# kubectl -n ${ns} logs $(kubectl -n ${ns} get -o 'jsonpath={.items[].metadata.name}' pods -l job-name=job)
-# kubectl -n ${ns} run -it --generator=run-pod/v1 --image gcr.io/edgar-research/worker test -- ed-worker tcp://scheduler.edgar-research.svc.cluster.local
+# kubectl -n ${ns} logs -f $(kubectl -n ${ns} get -o 'jsonpath={.items[].metadata.name}' pods -l job-name=job)
+# kubectl -n ${ns} port-forward $(kubectl -n ${ns} get -o 'jsonpath={.items[].metadata.name}' pods -l deployment=scheduler) 8787:8787
+# kubectl -n ${ns} logs -f $(kubectl -n ${ns} get -o 'jsonpath={.items[].metadata.name}' pods -l deployment=scheduler)
+# kubectl -n ${ns} logs -f $(kubectl -n ${ns} get -o 'jsonpath={.items[0].metadata.name}' pods -l deployment=worker)

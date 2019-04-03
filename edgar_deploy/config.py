@@ -11,10 +11,10 @@ class Config(object):
     # I am justified in hardcoding instance variables, because this
     # could be replaced with a dynamic property.
     def __init__(self):
-        self.module_dir = Path(__loader__.path).parent.relative_to(Path.cwd())
-        self.project_dir = self.module_dir.parent
+        self.package_dir = Path(__loader__.path).parent.relative_to(Path.cwd())
+        self.project_dir = self.package_dir.parent
 
-        with open(self.module_dir / 'config.yaml', 'r') as f:
+        with open(self.package_dir / 'config.yaml', 'r') as f:
             config = yaml.load(f)
 
         self.name = config['name']
@@ -23,7 +23,7 @@ class Config(object):
         self.gcloud.project = config['gcloud']['project']
         self.gcloud.region = config['gcloud']['region']
         self.gcloud.fq_zone = f"{config['gcloud']['region']}-{config['gcloud']['zone']}"
-        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = str(self.module_dir / config['gcloud']['service_account_file'])
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = str(self.package_dir / config['gcloud']['service_account_file'])
 
         self.run_name = Haikunator.haikunate(0)
 

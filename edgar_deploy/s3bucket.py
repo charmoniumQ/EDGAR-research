@@ -6,7 +6,14 @@ import google.cloud.storage
 # https://googleapis.github.io/google-cloud-python/latest/storage/client.html
 
 
+# TODO: use edgar_code/cloud/storage.py, but add
+#     @clasmethod
+#     def temporary_bucket(name=None, save=False):
+#         return context handler
+
+
 class S3Bucket(FileProvisionedResource):
+    @utils.time_code_decor(print_start=False)
     def __init__(self, name, *args, **kwargs):
         self.name = name
         self.client = google.cloud.storage.Client()

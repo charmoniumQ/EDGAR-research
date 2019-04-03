@@ -5,3 +5,4 @@ google-cloud-container
 google-cloud-storage
 kubernetes
 docker
+setuptools

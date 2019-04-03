@@ -74,7 +74,7 @@ class GKECluster(FileProvisionedResource):
         )
         self.cluster_manager.create_cluster(None, None, self.gke_cluster, parent=str(Path(self.name_path).parent.parent))
 
-    @utils.time_code_decor()
+    @utils.time_code_decor(print_start=False)
     def wait_for_gke(self):
         self.name_path = str(self.name_path)
         delays = itertools.chain([0, 5, 10], itertools.repeat(20))
@@ -84,6 +84,7 @@ class GKECluster(FileProvisionedResource):
             if self.gke_cluster.status == google.cloud.container_v1.enums.Cluster.Status.RUNNING.value:
                 break
 
+    @utils.time_code_decor(print_start=False)
     def setup_kube_auth(self):
         subprocess.run([
             'gcloud', '--quiet', 'container', 'clusters',
@@ -93,7 +94,6 @@ class GKECluster(FileProvisionedResource):
         kubernetes.config.load_kube_config()
         self.kube_api =  kubernetes.client.ApiClient()
 
-    @utils.time_code_decor()
     def delete(self):
         self.cluster_manager.delete_cluster(None, None, None, name=self.name_path)
         self.gke_cluster = None

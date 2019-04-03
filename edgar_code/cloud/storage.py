@@ -1,14 +1,18 @@
 import collections
 from urllib.parse import urlparse
 import io
-from dataclasses import dataclass
+import sys
+if sys.version_info >= (3, 7):
+    from dataclasses import dataclass
+else:
+    dataclass = lambda: lambda y: y
 from pathlib import Path
 import google.cloud.storage
 # https://googleapis.github.io/google-cloud-python/latest/storage/client.html
 
 # TODO: config
-import os
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'edgar_deploy/main-722.service_account.json'
+# import os
+# os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'edgar_deploy/main-722.service_account.json'
 
 
 @dataclass()
@@ -37,7 +41,7 @@ class GSPath(object):
         self.blob = self.bucket.blob(str(self.path))
 
     def __getstate__(self):
-        return {path: self.path, bucket: str(self.bucket)}
+        return {'path': self.path, 'bucket': self.bucket.name}
 
     def __setstate__(self, data):
         self.client = google.cloud.storage.Client()

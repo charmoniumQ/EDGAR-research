@@ -14,11 +14,10 @@ from .directors import form_items_to_directors
 # path and S3 credentials.
 
 
-#cache_decor = Cache.decor(IndexInFile.create(cache_path / 'index'), [BagStore.create(cache_path / 'bag')])
-cache_decor = lambda x: x
+cache_decor = Cache.decor(IndexInFile.create(cache_path / 'index'), [BagStore.create(cache_path / 'bag')])
+#cache_decor = lambda x: x
 
 
-@cache_decor
 def indexes_for(form_type, year, qtr):
     return KVBag.from_bag(
         download_indexes(form_type, year, qtr)
@@ -26,20 +25,17 @@ def indexes_for(form_type, year, qtr):
     )
 
 
-@cache_decor
 def form_texts_for(form_type, year, qtr):
     return indexes_for(form_type, year, qtr) \
         .map_values(index_to_form_text(form_type))
 
 
 # TODO: remove this extraneous cache
-@cache_decor
 def main_texts_for(form_type, year, qtr):
     return form_texts_for(form_type, year, qtr) \
         .map_values(form_text_to_main_text(form_type))
 
 
-@cache_decor
 def form_itemss_for(form_type, year, qtr):
     '''
     :return: bag of dictionaries where each dict has a form-heading as its key, and the text of that form-heading as its value.

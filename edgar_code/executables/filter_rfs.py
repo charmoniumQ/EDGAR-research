@@ -33,9 +33,9 @@ def pick_n(indexes, n):
     return dask.bag.from_sequence(random.sample(indexes.compute(), n))
 
 
-if __name__ == '__main__':
+if __name__ == '__main__' or True:
     year = 2008
     qtr = 2
-    filterer = pick_n(n=2)
+    filterer = pick_n(n=12)
     dir_ = new_directory()
     main(year, qtr, filterer, dir_)

@@ -1,6 +1,7 @@
 from . import utils
 
 
+# consider using recursive hashing
 def modtime(path):
     s = path.stat()
     latest_timestamp = max(s.st_mtime, s.st_ctime)
