@@ -1,69 +1,127 @@
+import dask
+import urllib.parse
 import edgar_code.util.cache as cache
-
-import base64
-import pickle
 import toolz
-import random
-import string
+import shutil
 
 
-def rand_name(n=20):
-    return ''.join(random.choice(string.ascii_letters) for _ in range(20))
+def safe_name(obj):
+    '''
+Safe names are compact, unique, urlsafe, and equal when the objects are equal
+
+str does not work because x == y does not imply str(x) == str(y).
+
+    >>> a = dict(d=1, e=1)
+    >>> b = dict(e=1, d=1)
+    >>> a == b
+    True
+    >>> str(a) == str(b)
+    False
+'''
+    if isinstance(obj, int):
+        return str(obj)
+    elif isinstance(obj, float):
+        return str(round(obj, 3))
+    elif isinstance(obj, str):
+        return urllib.parse.quote(repr(obj))
+    elif isinstance(obj, tuple):
+        return '%2C'.join(map(safe_name, obj))
+    elif isinstance(obj, dict):
+        contents = '%2C'.join(
+            safe_name(key) + '%3A' + safe_name(val)
+            for key, val in sorted(obj.items())
+        )
+        return '%7B' + contents + '%7D'
+    else:
+        raise TypeError()
 
 
-# TODO: make sure this stores partitions in gs, returns URLs, which
-# are stored in gs in the index. NOT in an obj store and the index.
-
-class BagStore(cache.Store):
-    def __init__(self, parent_path, name, serializer=None):
+class BagStore(cache.ObjectStore):
+    def __init__(self, bag_path, name, serializer=None):
         super().__init__(name)
-        self.parent_path = parent_path
-        self.serializer = serializer if serializer is not None else pickle
+        if serializer is None:
+            import pickle
+            serializer = pickle
+        self.serializer = serializer
+        self.bag_path = bag_path / name
 
-    def can_store(self, obj):
-        return hasattr(obj, 'map_partitions')
+    def to_key(self, args, kwargs):
+        if kwargs:
+            args = args + (kwargs,)
+        try:
+            name = safe_name(args)
+        except TypeError:
+            name = str(hash(hashable(args)))
+        return self.bag_path / name
 
-    def put(self, bag):
-        while True:
-            key = rand_name()
-            bag_path = self.parent_path / key
-            if not bag_path.exists():
-                break
-        items_path = (
-            bag
-            .map_partitions(
-                toolz.partial(self.dump_partition, bag_path=bag_path)
-            )
-            .compute()
-        )
-        bag_type = type(bag)
-        return items_path, bag_type
+    def __setitem__(self, bag_path, bag):
+        new_bag = bag.map_partitions((self.dump_partition(bag_path)))
+        # get partition number as second argument
+        new_bag.dask.dicts[new_bag.name] = {
+            key: val + (key[1],)
+            for key, val in new_bag.dask.dicts[new_bag.name].items()
+        }
 
-    def dump_partition(self, partition, bag_path):
-        partition_path = bag_path / rand_name(20) # pray for no collisions
+        # mutate bag to be new_bag
+        bag.npartitions = new_bag.npartitions
+        bag.dask = new_bag.dask
+        bag.name = new_bag.name
+
+        index_path = bag_path / 'index.pickle'
+        with index_path.open('wb') as f:
+            self.serializer.dump((bag.npartitions, type(bag)), f)
+
+    @toolz.curry
+    def dump_partition(self, bag_path, partition, partition_no):
+        partition = list(partition)
+        partition_path = bag_path / f'part_{partition_no}.pickle'
         with partition_path.open('wb') as f:
-            self.serializer.dump(list(partition), f)
-        return partition_path
-
-    def __getitem__(self, key):
-        item_paths, bag_type = key
-        return (
-            bag_type.from_sequence(item_paths, npartitions=len(items_path))
-            .map_partitions(self.load_partition)
-        )
-
-    def load_partition(self, item_paths):
-        for item_path in item_paths:
-            partition = []
-            with item_path.open('rb') as f:
-                partition.extend(self.serializer.load(f))
-            # print('load_partition', partition)
+            self.serializer.dump(partition, f)
+        # return partition so that it is transparent to the rest of the task graph
         return partition
 
-    def __delitem__(self, key):
-        item_paths, bag_type = key
-        for item_path in items_paths:
-            item_path.unlink()
+    def __getitem__(self, bag_path):
+        index_path = bag_path / 'index.pickle'
+        with index_path.open('rb') as f:
+            npartitions, bag_type = self.serializer.load(f)
+        if bag_type == dask.bag.Bag:
+            bag_type = dask.bag
+
+        return bag_type.from_bag(
+            dask.bag.range(npartitions, npartitions=npartitions)
+            .map_partitions(self.load_partition(bag_path))
+        )
+
+    @toolz.curry
+    def load_partition(self, bag_path, partition_no_list):
+        partition_no = partition_no_list[0]
+        partition_path = bag_path / f'part_{partition_no}.pickle'
+        with partition_path.open('rb') as f:
+            return self.serializer.load(f)
+
+    def __contains__(self, bag_path):
+        index_path = bag_path / 'index.pickle'
+        if index_path.exists():
+            with index_path.open('rb') as f:
+                npartitions, bag_type = self.serializer.load(f)
+            if len(list(bag_path.iterdir())) == npartitions + 1:
+                return True
+            else:
+                # We have a partially stored bag
+                # Not valid, so delete before anyone gets confused
+                del self[bag_path]
+                return False
+        else:
+            return False
+
+    def __delitem__(self, bag_path):
+        if hasattr(bag_path, 'rmtree'):
+            bag_path.rmtree()
+        else:
+            shutil.rmtree(bag_path)
 
     def clear(self):
-        pass
+        if hasattr(self.bag_path, 'rmtree'):
+            self.bag_path.rmtree()
+        else:
+            shutil.rmtree(self.bag_path)

@@ -11,8 +11,7 @@ import google.cloud.storage
 # https://googleapis.github.io/google-cloud-python/latest/storage/client.html
 
 # TODO: config
-# import os
-# os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'edgar_deploy/main-722.service_account.json'
+# GOOGLE_APPLICATION_CREDENTIALS=edgar_deploy/main-722.service_account.json python3 -m edgar_code.executables.get_all_rfs
 
 
 @dataclass()
@@ -53,7 +52,8 @@ class GSPath(object):
         return GSPath(self.bucket, self.path / other)
 
     def __repr__(self):
-        return f'GSPath.from_url(gs://{self.bucket}/{self.path})'
+        url = f'gs://{self.bucket.name}/{self.path}'
+        return f'GSPath.from_url({url!r})'
 
     @property
     def parent(self):
@@ -63,6 +63,10 @@ class GSPath(object):
         # no notion of 'directories' in GS
         pass
 
+    def rmtree(self):
+        for path in self.iterdir():
+            path.unlink()
+
     def exists(self):
         return self.blob.exists()
 
@@ -70,17 +74,32 @@ class GSPath(object):
         self.blob.delete()
 
     def iterdir(self):
-        for blob in self.bucket.list_blobs(prefix='{self.path!s}/'):
-            yield GSPath.from_blob(blob.name)
+        for blob in self.bucket.list_blobs(prefix=f'{self.path!s}/'):
+            yield GSPath.from_blob(blob)
 
     def open(self, flags):
-        return GSFile(self)
+        if flags == 'wb':
+            return WGSFile(self)
+        elif flags == 'rb':
+            return RGSFile(self)
+        else:
+            raise RuntimeError(f'Flag {flags} not supported')
 
 
-class GSFile(io.BytesIO):
+class WGSFile(io.BytesIO):
     def __init__(self, gs_path: GSPath):
         self.gs_path = gs_path
 
     def close(self):
         self.gs_path.blob.upload_from_file(self, rewind=True)
+        super().close()
+
+
+class RGSFile(io.BytesIO):
+    def __init__(self, gs_path: GSPath):
+        self.gs_path = gs_path
+        super().__init__(self.gs_path.blob.download_as_string())
+        self.seek(0)
+
+    def close(self):
         super().close()

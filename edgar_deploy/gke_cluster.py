@@ -17,12 +17,12 @@ import kubernetes
 
 
 class GKECluster(FileProvisionedResource):
-    def __init__(self, nodecount=1, cache_dir=None, name=None):
+    def __init__(self, nodecount=1, cache_dir=None, name=None, machine_type='n1-standard-1'):
         self.nodecount = nodecount
         self.name = name
         self.name_path = f'projects/{config.gcloud.project}/locations/{config.gcloud.fq_zone}/clusters/{self.name}'
         self.cluster_manager = google.cloud.container_v1.ClusterManagerClient()
-        self.provision_cluster()
+        self.provision_cluster(machine_type)
         self.wait_for_gke()
         self.setup_kube_auth()
         super().__init__(nodecount, cache_dir=cache_dir, name=name)
@@ -40,13 +40,14 @@ class GKECluster(FileProvisionedResource):
         # merely unpickling the GKECluster will not restore the external state
         self.setup_kube_auth()
 
-    def provision_cluster(self):
+    def provision_cluster(self, machine_type):
         self.gke_cluster = google.cloud.container_v1.types.Cluster(
             name=self.name,
             initial_node_count=self.nodecount,
             node_config=google.cloud.container_v1.types.NodeConfig(
                 # Consider changing this for cost-effectiveness
-                machine_type='n1-standard-1',
+                machine_type=machine_type,
+                # machine_type='n1-standard-1',
                 # in GB, minimum is 10
                 disk_size_gb=10,
                 # TODO: examine the effect of this
@@ -57,6 +58,8 @@ class GKECluster(FileProvisionedResource):
                 ],
                 service_account='main-722@edgar-research.iam.gserviceaccount.com',
             ),
+
+            # strip down cluster for more efficiency
             addons_config=google.cloud.container_v1.types.AddonsConfig(
                 http_load_balancing=google.cloud.container_v1.types.HttpLoadBalancing(
                     disabled=True,
@@ -71,6 +74,8 @@ class GKECluster(FileProvisionedResource):
                     disabled=True,
                 ),
             ),
+            logging_service=None,
+            monitoring_service=None
         )
         self.cluster_manager.create_cluster(None, None, self.gke_cluster, parent=str(Path(self.name_path).parent.parent))
 

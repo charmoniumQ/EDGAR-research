@@ -1,9 +1,9 @@
 import re
 import datetime
 import collections
-import urllib.request
 import zipfile
 import io
+from edgar_code.util import download_retry
 from edgar_code.cloud import KVBag
 import dask.bag
 
@@ -21,20 +21,21 @@ def download_indexes_lazy(form_type, year, qtr):
     return filter_form_type(indexes, form_type)
 
 
+npartitions = 40
 def download_indexes(form_type, year, qtr):
     '''Returns an bag of Record-types'''
     lines = download_index_lines(year, qtr)
     col_names = parse_header(lines)
     indexes = parse_body(year, qtr, lines, col_names)
     relevant_indexes = filter_form_type(indexes, form_type)
-    return dask.bag.from_sequence(relevant_indexes)
+    return dask.bag.from_sequence(relevant_indexes, npartitions=npartitions)
 
 
 def download_index_lines(year, qtr):
     index_type = 'form'
     url = f'https://www.sec.gov/Archives/edgar/full-index/{year}/QTR{qtr}/{index_type}.zip'
-    compressed_file = urllib.request.urlopen(url).read()
-    compressed_file = io.BytesIO(compressed_file)
+    compressed_str = download_retry(url)
+    compressed_file = io.BytesIO(compressed_str)
 
     # unzip the file
     with zipfile.ZipFile(compressed_file, 'r') as index_zip:

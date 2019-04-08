@@ -1,11 +1,11 @@
 import re
-import urllib
 import toolz
 from . import helpers
+from edgar_code.util import download_retry
 
 
 def index_to_url(form_type, index):
-    sgml = urllib.request.urlopen(index.url).read()    
+    sgml = download_retry(index.url)
     fileinfos = helpers.SGML_to_fileinfos(sgml)
     for file_info in fileinfos:
         if file_info['type'] == form_type:
@@ -16,11 +16,15 @@ def index_to_url(form_type, index):
     url = index.url.replace('-', '')
     return url[:-4] + '/' + filename
 
+
 @toolz.curry
 def index_to_form_text(form_type, index):
-    sgml = urllib.request.urlopen(index.url).read()
+    sgml = download_retry(index.url)
     fileinfos = helpers.SGML_to_fileinfos(sgml)
-    return helpers.find_form(fileinfos, form_type)
+    try:
+        return helpers.find_form(fileinfos, form_type)
+    except helpers.ParseError as e:
+        return ''
 
 
 @toolz.curry
@@ -36,8 +40,8 @@ def form_text_to_main_text(form_type, form_raw):
         # special case, 10-K forms contain table of contents
         try:
             main_text = helpers.remove_header(clean_text)
-        except:
-            main_text = None
+        except helpers.ParseError:
+            main_text = ''
     else:
         main_text = clean_text
     return main_text
@@ -45,11 +49,7 @@ def form_text_to_main_text(form_type, form_raw):
 
 @toolz.curry
 def main_text_to_form_items(form_type, main_text):
-    if main_text is not None:
-        return helpers.main_text_to_form_items(main_text, item_headers[form_type])
-    else:
-        return {}
-
+    return helpers.main_text_to_form_items(main_text, item_headers[form_type])
 
 item_headers = {
     '10-K': [

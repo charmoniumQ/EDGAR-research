@@ -8,35 +8,42 @@ from .s3bucket import S3Bucket
 from . import utils
 
 
+cores_per_node = 1
+node_count = 8
+cluster_name = f'{config.name}-2'
+worker_count = cores_per_node * node_count
+namespace = f'{config.name}-{utils.rand_name(5, lowercase=True)}'
+egg_name = f'eggs/edgar_code-{namespace}.egg'
+machine_type = f'n1-standard-{cores_per_node}'
+
+
 images = prepare_docker_images(cache_dir=config.cache_dir)
 
 
-cluster = GKECluster.create_or_load(
-    nodecount=8,
-    cache_dir=config.cache_dir,
-    name=f'{config.name}-1',
-    should_save=True,
-)
-
-
 s3bucket = S3Bucket.create_or_load(
-    name=f'{cluster.name}-status',
+    name=f'{cluster_name}-status',
     save=False,
     cache_dir=config.cache_dir,
 )
 
 
-namespace = f'{config.name}-{utils.rand_name(5, lowercase=True)}'
-egg_name = f'eggs/edgar_code-{namespace}.egg'
 with s3bucket:
     prepare_egg(s3bucket.bucket.blob(egg_name))
+
+    cluster = GKECluster.create_or_load(
+        nodecount=node_count,
+        machine_type=machine_type,
+        cache_dir=config.cache_dir,
+        name=cluster_name,
+        should_save=True,
+    )
 
     with cluster:
         with kubernetes_namespace(cluster.kube_api, namespace):
             setup_kubernetes(
                 cluster.kube_api,
                 namespace,
-                cluster.nodecount,
+                worker_count,
                 images,
                 s3bucket.name,
             )

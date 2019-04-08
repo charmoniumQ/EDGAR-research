@@ -165,14 +165,12 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                         ),
                     ),
                     spec=kubernetes.client.V1PodSpec(
-                        # TODO: memory and cpu limits
                         containers=[
                             kubernetes.client.V1Container(
                                 name='worker',
                                 image=images['worker'].result(),
                                 command=[
                                     '/bin/sh', '-c', 'dask-worker ${dask_scheduler_address}',
-                                    # TODO: memory management
                                     # TODO: nprocs
                                     # TODO: nthreads
                                 ],
@@ -180,8 +178,8 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                                 env=env_vars,
                                 resources=kubernetes.client.V1ResourceRequirements(
                                     requests=dict(
-                                        cpu='400m',
-                                        memory='1.5Gi',
+                                        cpu='350m',
+                                        memory='0.2Gi',
                                     ),
                                 ),
                             ),
@@ -230,3 +228,4 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
 # kubectl -n ${ns} port-forward $(kubectl -n ${ns} get -o 'jsonpath={.items[].metadata.name}' pods -l deployment=scheduler) 8787:8787
 # kubectl -n ${ns} logs -f $(kubectl -n ${ns} get -o 'jsonpath={.items[].metadata.name}' pods -l deployment=scheduler)
 # kubectl -n ${ns} logs -f $(kubectl -n ${ns} get -o 'jsonpath={.items[0].metadata.name}' pods -l deployment=worker)
+# kubectl -n ${ns} describe pod $(kubectl -n ${ns} get -o 'jsonpath={.items[0].metadata.name}' pods -l deployment=worker)

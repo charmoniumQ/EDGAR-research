@@ -41,7 +41,7 @@ def find_form(fileinfos, form_type):
         if file_info['type'] == form_type:
             return file_info['text'].decode()
     else:
-        raise ParseError('Cannot find the 10K')
+        raise ParseError(f'Cannot find the form_type {form_type}')
 
 
 def is_html(text):
@@ -250,7 +250,7 @@ def remove_header(text):
     # it to match "part i" in the middle of a paragraph
     parti = re.search('^part i[\\. \n]', text, re.MULTILINE | re.IGNORECASE)
     if parti is None:
-        raise helpers.ParseError('Could not find "Part I" to remove header')
+        raise ParseError('Could not find "Part I" to remove header')
     text = text[parti.end():]
 
     # ====== remove table of contents, if it exists ====

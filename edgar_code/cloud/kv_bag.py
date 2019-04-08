@@ -26,11 +26,23 @@ class KVBag(dask.bag.Bag):
     def map(self, func):
         return KVBag.from_bag(super().map(func))
 
+    # these return regular ole bags
+
+    def values(self):
+        def values_picker(pair):
+            return pair[1]
+        return super().map(values_picker)
+
+    def keys(self):
+        def keys_picker(pair):
+            return pair[0]
+        return super().map(keys_picker)
+
     # public constructors. use these insead of __init__
 
     @classmethod
-    def from_sequence(Class, seq):
-        return Class.from_bag(bag.from_sequence(seq))
+    def from_sequence(Class, seq, npartitions=None, partition_size=None):
+        return Class.from_bag(dask.bag.from_sequence(seq, npartitions, partition_size))
 
     @classmethod
     def from_bag(Class, bag):

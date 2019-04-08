@@ -12,7 +12,7 @@ def prepare_docker_images(cache_dir=None):
         ['gcloud', '--quiet', 'auth', 'configure-docker'],
         capture_output=True
     )
-    dockerfolders = list((config.project_dir / 'edgar_cluster').iterdir())
+    dockerfolders = list((config.package_dir / 'dockerfiles').iterdir())
     executor = ThreadPoolExecutor(max_workers=len(dockerfolders))
     compiled_images = {
         dockerfolder.name: executor.submit(

@@ -1,6 +1,6 @@
 import toolz
 from ..cloud import cache_path, BagStore, KVBag
-from ..util.cache import Cache, IndexInFile, FileStore
+from ..util.cache import Cache
 from .index import download_indexes
 from .form import index_to_form_text, form_text_to_main_text, main_text_to_form_items
 from .rf import form_items_to_rf
@@ -14,10 +14,11 @@ from .directors import form_items_to_directors
 # path and S3 credentials.
 
 
-cache_decor = Cache.decor(IndexInFile.create(cache_path / 'index'), [BagStore.create(cache_path / 'bag')])
+cache_decor = Cache.decor(BagStore.create(cache_path / 'bags'), miss_msg=True)
 #cache_decor = lambda x: x
 
 
+@cache_decor
 def indexes_for(form_type, year, qtr):
     return KVBag.from_bag(
         download_indexes(form_type, year, qtr)
@@ -26,14 +27,18 @@ def indexes_for(form_type, year, qtr):
 
 
 def form_texts_for(form_type, year, qtr):
-    return indexes_for(form_type, year, qtr) \
+    return (
+        indexes_for(form_type, year, qtr)
         .map_values(index_to_form_text(form_type))
+    )
 
 
-# TODO: remove this extraneous cache
+@cache_decor
 def main_texts_for(form_type, year, qtr):
-    return form_texts_for(form_type, year, qtr) \
+    return (
+        form_texts_for(form_type, year, qtr)
         .map_values(form_text_to_main_text(form_type))
+    )
 
 
 def form_itemss_for(form_type, year, qtr):
@@ -42,14 +47,18 @@ def form_itemss_for(form_type, year, qtr):
     For example:
     {'Item 1A': 'This is the section 1a text here.', 'Item 2': 'This is the section 2 text'}
     '''
-    return main_texts_for(form_type, year, qtr) \
+    return (
+        main_texts_for(form_type, year, qtr)
         .map_values(main_text_to_form_items(form_type))
+    )
 
 
 @cache_decor
 def rfs_for(year, qtr):
-    return form_itemss_for('10-K', year, qtr) \
+    return (
+        form_itemss_for('10-K', year, qtr)
         .map_values(form_items_to_rf)
+    )
 
 
 def directors_for(year, qtr):
