@@ -9,14 +9,34 @@ class KVBag(dask.bag.Bag):
     def map_values(self, func):
         def mapper(pair):
             return (pair[0], func(pair[1]))
-        mapper.__name__ = f'KVBag.map({func.__name__})'
+        mapper.__name__ = f'KVBag.map({func.__qualname__})'
         return self.map(mapper)
 
     def filter_values(self, func):
         def filterer(pair):
             return func(pair[1])
-        mapper.__name__ = f'KVBag.filter({func.__name__})'
+        filterer.__name__ = f'KVBag.filter({func.__qualname__})'
         return self.filter(filterer)
+
+    def map_keys(self, func):
+        def mapper(pair):
+            return (func(pair[0]), pair[1])
+        mapper.__name__ = f'KVBag.map({func.__qualname__})'
+
+    # def enumerate(self):
+    #     def tupler(*args):
+    #         return args
+    #     self.dask.dicts[self.name] = {
+    #         key: (tupler, val key[1],)
+    #         for key, val in self.dask.dicts[self.name].items()
+    #     }
+    #     return result
+
+    def flatten_values(self):
+        def rekey(pair):
+            key, vals = pair
+            return [((key, i), val) for i, val in enumerate(vals)]
+        return self.map(rekey).flatten()
 
     # modify to return subclass
 
@@ -25,6 +45,9 @@ class KVBag(dask.bag.Bag):
 
     def map(self, func):
         return KVBag.from_bag(super().map(func))
+
+    def flatten(self):
+        return KVBag.from_bag(super().flatten())
 
     # these return regular ole bags
 

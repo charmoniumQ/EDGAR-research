@@ -1,0 +1,13 @@
+https://www.sec.gov/edgar/searchedgar/accessing-edgar-data.htm
+
+The CIK is the unique numerical identifier assigned by the EDGAR system to filers when they sign up to make filings to the SEC. CIK numbers remain unique to the filer; they are not recycled.
+
+https://www.sec.gov/Archives/edgar/cik-lookup-data.txt
+
+Note that this list includes funds and individuals and is historically cumulative for company names. Thus a given CIK may be associated with multiple names in the case of company or fund name changes, and the list contains some entities that no longer file with the SEC.
+
+http://www.sec.gov/cgi-bin/browse-edgar?CIK=AAPL&action=getcompany
+
+http://rankandfiled.com/#/data/tickers
+
+https://stackoverflow.com/a/46691676/1078199

@@ -18,17 +18,20 @@ def index_to_url(form_type, index):
 
 
 @toolz.curry
-def index_to_form_text(form_type, index):
+def index_to_form_text(form_type, index, suppress_errors=True):
     sgml = download_retry(index.url)
     fileinfos = helpers.SGML_to_fileinfos(sgml)
     try:
         return helpers.find_form(fileinfos, form_type)
     except helpers.ParseError as e:
-        return ''
+        if suppress_errors:
+            return ''
+        else:
+            raise e
 
 
 @toolz.curry
-def form_text_to_main_text(form_type, form_raw):
+def form_text_to_main_text(form_type, form_raw, suppress_errors=True):
     if helpers.is_html(form_raw):
         html = form_raw
         clean_html = helpers.clean_html(html)
@@ -40,8 +43,11 @@ def form_text_to_main_text(form_type, form_raw):
         # special case, 10-K forms contain table of contents
         try:
             main_text = helpers.remove_header(clean_text)
-        except helpers.ParseError:
-            main_text = ''
+        except helpers.ParseError as e:
+            if suppress_errors:
+                main_text = ''
+            else:
+                raise e
     else:
         main_text = clean_text
     return main_text

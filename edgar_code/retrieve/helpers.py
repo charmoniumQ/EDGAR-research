@@ -3,19 +3,19 @@ from html.parser import HTMLParser
 import itertools
 import re
 
-
+doc_pattern = re.compile(b'<DOCUMENT>(.*?)</DOCUMENT>', re.DOTALL)
+text_pattern = re.compile(b'(.*)<TEXT>(.*?)</TEXT>(.*)', re.DOTALL)
+tagcontent_pattern = re.compile(b'<(.*?)>(.*?)[\n<]', re.DOTALL)
 def SGML_to_fileinfos(sgml_contents):
     '''Inputs the downloaded SGML and outputs a list of dicts
 
     Each document described in the SGML gets converted to a dict of all of its
     attributes, including the 'text', which has actual text of a document'''
 
-    doc_pattern = re.compile(b'<DOCUMENT>(.*?)</DOCUMENT>', re.DOTALL)
     for doc_match in doc_pattern.finditer(sgml_contents):
         this_file = {}
         doc_text = doc_match.group(1)
 
-        text_pattern = re.compile(b'(.*)<TEXT>(.*?)</TEXT>(.*)', re.DOTALL)
         text_match = text_pattern.search(doc_text)
         this_file['text'] = text_match.group(2)
         rest_text = text_match.group(1) + text_match.group(3)
@@ -26,7 +26,6 @@ def SGML_to_fileinfos(sgml_contents):
         # and
         # <TAG>stuff</TAG>
         # <OTHERTAG>more stuff</OTHERTAG>
-        tagcontent_pattern = re.compile(b'<(.*?)>(.*?)[\n<]', re.DOTALL)
         for tagcontent in tagcontent_pattern.finditer(rest_text):
             tagname = tagcontent.group(1).lower().decode()
             content = tagcontent.group(2).decode()
@@ -39,7 +38,10 @@ def find_form(fileinfos, form_type):
     SGML_to_fileinfos'''
     for file_info in fileinfos:
         if file_info['type'] == form_type:
-            return file_info['text'].decode()
+            try:
+                return file_info['text'].decode()
+            except UnicodeDecodeError as e:
+                raise ParseError(str(e))
     else:
         raise ParseError(f'Cannot find the form_type {form_type}')
 
@@ -76,12 +78,13 @@ def clean_html(html):
     return html
 
 
+html_tag_pattern = re.compile('<.*?>')
 def html_to_text(html):
     '''Extract plain text from HTML'''
 
     # remove ALL HTML tags.
     # this makes beautiful soup take less time to parse it
-    html = re.sub('<.*?>', '', html)
+    html = html_tag_pattern.sub('', html)
 
     # decode HTML characters such as &amp; &
     # text = BeautifulSoup(html, 'html.parser').text
@@ -97,24 +100,33 @@ def is_toc(alpha_line):
             and len(alpha_line) <= len('tableofcontents') + 4)
 
 
+non_alpha_chars_pattern = re.compile('[^a-zA-Z]+')
 def is_text_line(line):
     # remove non-alphabetic characters
-    alpha_line = re.sub('[^a-zA-Z]', '', line).lower()
+    alpha_line = non_alpha_chars_pattern.sub('', line).lower()
     # TODO: examine bullet-points in 1-800-FLOWERS
     return len(alpha_line) > 3 and not(is_toc(alpha_line))
 
 
+page_pattern = re.compile(r'\<PAGE\>.*')
+page2_pattern = re.compile(r'^\s*PAGE.*')
+C_pattern = re.compile(r'\<C\>\s*')
+bullets = '([\u25cf\u00b7\u2022\x95])'
+bullet_pattern = re.compile(fr'\s+{bullets}\s+')
+spaces_pattern = re.compile(' +')
+single_newline_pattern = re.compile('([^\n])\n([^\n])')
+mult_newlines_pattern = re.compile('\n+')
 def clean_text(text):
     '''Cleans plaintext for semantically insignificant items'''
 
-    if '<PAGE>' in text or '<C>' in text:
-        text = re.sub('\\<PAGE\\>\s*', '\n', text)
-        text = re.sub('\\<C\\>\s*', '\n', text)
+    text = page_pattern.sub('\n', text)
+    text = page2_pattern.sub('\n', text)
+    text = C_pattern.sub('\n', text)
 
     #### character replacements ####
 
     # change windows-newline to linux-newline
-    text = re.sub('\r\n', '\n', text)
+    text = text.replace('\r\n', '\n')
 
     # change remaining carriage returns to newlines
     # text = re.sub('\r', '\n', text)
@@ -130,33 +142,32 @@ def clean_text(text):
         text = text.replace(bad_char, "[character sam couldn't figure out]")
 
     # turn bullet-point + whitespace into space
-    bullets = '([\u25cf\u00b7\u2022\x95])'
-    text = re.sub(fr'\s+{bullets}\s+', ' ', text)
+    text = bullet_pattern.sub(' ', text)
     # TODO: add punctuation if punctuation is not at the end
 
     #### filter semantic spaces ####
 
     # turn tab into space
-    text = re.sub('\t', ' ', text)
+    text = text.replace('\t', ' ')
 
     # replace multiple spaces with a single one
     # multiple spaces is not semantically significant and it complicates regex
     # later
-    text = re.sub('  +', ' ', text)
+    text = spaces_pattern.sub(' ', text)
 
     #### filter semantic newlines ####
 
     # strip leading and trailing spaces
     # these are note semantically significant and it complicates regex later on
-    text = re.sub('\n ', '\n', text)
-    text = re.sub(' \n', '\n', text)
+    text = text.replace('\n ', '\n')
+    text = text.replace(' \n', '\n')
 
     # remove single newlines (now that lines are stripped)
     # only double newlines are semantically significant
-    text = re.sub('([^\n])\n([^\n])', '\\1 \\2', text)
+    text = single_newline_pattern.sub('\\1 \\2', text)
 
     # double newline -> newline (now that single newlines are removed)
-    text = re.sub('\n+', '\n', text)
+    text = mult_newlines_pattern.sub('\n', text)
 
     text = '\n'.join(filter(is_text_line, text.split('\n')))
 
@@ -238,6 +249,7 @@ class ParseError(Exception):
     pass
 
 
+header_pattern = re.compile('^\\s*part i[\\. \n]', re.MULTILINE | re.IGNORECASE)
 def remove_header(text):
     # text is header, (optional) table of contents, and body
     # table of contents starts with "Part I"
@@ -248,13 +260,14 @@ def remove_header(text):
     # "part ii"
     # note that the begining of line anchor is necessary because we don't want
     # it to match "part i" in the middle of a paragraph
-    parti = re.search('^part i[\\. \n]', text, re.MULTILINE | re.IGNORECASE)
+    print(text[1000:4000])
+    parti = header_pattern.search(text)
     if parti is None:
         raise ParseError('Could not find "Part I" to remove header')
     text = text[parti.end():]
 
     # ====== remove table of contents, if it exists ====
-    parti = re.search('^part i[\\. \n]', text, re.MULTILINE | re.IGNORECASE)
+    parti = header_pattern.search(text)
     if parti:
         text = text[parti.end():]
     else:

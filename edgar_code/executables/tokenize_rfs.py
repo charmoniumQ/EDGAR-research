@@ -1,55 +1,33 @@
-import json
-from edgar_code.util import new_directory, sanitize_fname, unused_fname
 from edgar_code.retrieve import rfs_for
-from edgar_code.tokenize import text2section_word_stems, combine_counts
-from dask.diagnostics import ProgressBar
+from edgar_code.tokenize2 import text2paragraphs
+from edgar_code.cloud import cache_path
+from edgar_code.util.cache import Cache, DirectoryStore
 
 
-from ..cloud import get_s3path
-from ..util.cache import Cache, IndexInFile, CustomStore
-
-
-index_cache = get_s3path('cache', 'cache')
-object_cache = get_s3path('cache', 'cache')
-
-
-@Cache(IndexInFile(index_cache), CustomStore(object_cache, dir_=object_cache), 'hit {name} with {key}', 'miss {name} with {key}')
+@Cache.decor(DirectoryStore.create(cache_path / 'cache'), miss_msg=True)
 def section_word_stems_for(year, qtr):
     # this is the cluster-compting part
+    def is_good_rf(rf):
+        return len(x) > 1000
+    def index_to_keys(oldkey):
+        index, n = oldkey
+        return (index.year, index.CIK, n)
     return (
         rfs_for(year, qtr)
-        .filter_values(bool)
-        .filter_values(lambda x: len(x) > 1000)
-        .map_values(text2section_word_stems)
+        .filter_values(is_good_rf)
+        .map_values(text2paragraphs)
+        .flatmap_values()
+        .map_keys(index_to_keys)
+        .map_values(text2ws_counts)
     )
 
 
-def main(year, qtr, dir_):
-    pbar = ProgressBar()
-    pbar.register()
-    data = section_word_stems_for(year, qtr).map_values(combine_counts)
-    for record, (wc, sc) in data.compute():
-        # this is collecting and storing the results locally
-
-        starting_fname = sanitize_fname(record.company_name)
-        fname = unused_fname(dir_, starting_fname).with_suffix('.txt')
-        print(f'{record.company_name} -> {fname.name}')
-        with fname.open('w', encoding='utf-8') as f:
-            record_ = dict(**record._asdict())
-            record_['date_filed'] = str(record_['date_filed'])
-            f.write(json.dumps(record_))
-            f.write('\n')
-            for word, freq in sc.most_common(100):
-                f.write(f'{freq},{word}\n')
-            f.write('\n')
-            for word, freq in wc.most_common(100):
-                f.write(f'{freq},{word}\n')
+def main():
+    for year in range(2006, 2019):
+        for qtr in range(1, 5):
+            section_word_stems_for(year, qtr)
 
 
 if __name__ == '__main__':
-    year = 2008
-    qtr = 2
-    dir_ = new_directory()
-    print('results in', dir_)
-    main(year, qtr, dir_)
+    main()
 

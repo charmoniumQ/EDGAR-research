@@ -21,7 +21,7 @@ def download_indexes_lazy(form_type, year, qtr):
     return filter_form_type(indexes, form_type)
 
 
-npartitions = 40
+npartitions = 100
 def download_indexes(form_type, year, qtr):
     '''Returns an bag of Record-types'''
     lines = download_index_lines(year, qtr)

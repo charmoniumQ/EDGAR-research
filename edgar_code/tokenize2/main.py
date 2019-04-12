@@ -61,3 +61,18 @@ def text2sections_and_counts(text):
             stem_count[stem] += 1
 
         yield heading_paragraphs, body_paragraphs, stem_count
+
+
+import nltk.tokenize
+
+
+def text2ws_counts(text):
+    words = nltk.tokenize.word_tokenize(text)
+    for word in words:
+        counter = collections.Counter()
+        unstem = collections.defaultdict(set)
+        if is_word(word) and is_significant_word(word):
+            stem = word2stem(word)
+            counter[stem] += 1
+            unstem[stem].add(word)
+    return counter, unstem

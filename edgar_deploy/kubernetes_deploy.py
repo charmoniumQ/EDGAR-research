@@ -145,6 +145,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
         ),
     )
 
+    memory = int(0.3e6)
     kube_v1beta.create_namespaced_deployment(
         namespace,
         kubernetes.client.ExtensionsV1beta1Deployment(
@@ -170,7 +171,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                                 name='worker',
                                 image=images['worker'].result(),
                                 command=[
-                                    '/bin/sh', '-c', 'dask-worker ${dask_scheduler_address}',
+                                    '/bin/sh', '-c', 'dask-worker ${dask_scheduler_address}', '--memory-limit', str(memory * 1024),
                                     # TODO: nprocs
                                     # TODO: nthreads
                                 ],
@@ -179,7 +180,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                                 resources=kubernetes.client.V1ResourceRequirements(
                                     requests=dict(
                                         cpu='350m',
-                                        memory='0.2Gi',
+                                        memory=f'{memory}Ki',
                                     ),
                                 ),
                             ),

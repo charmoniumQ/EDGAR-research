@@ -15,4 +15,5 @@ ADD wait_for_scheduler.py /work/wait_for_scheduler.py
 ADD runner.py /work/runner.py
 
 # see worker/Dockerfile
-RUN pip3 install dask[bag] google-cloud-storage requests toolz cloudpickle
+RUN pip3 install dask[bag] google-cloud-storage requests toolz cloudpickle nltk
+RUN python3 -c "import nltk; nltk.download('stopwords')"
