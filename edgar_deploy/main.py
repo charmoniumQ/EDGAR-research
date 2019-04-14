@@ -8,13 +8,13 @@ from .s3bucket import S3Bucket
 from . import utils
 
 
-cores_per_node = 1
+cores_per_node = 2
 node_count = 8
 cluster_name = f'{config.name}-2'
 worker_count = cores_per_node * node_count
 namespace = f'{config.name}-{utils.rand_name(5, lowercase=True)}'
 egg_name = f'eggs/edgar_code-{namespace}.egg'
-machine_type = f'n1-standard-{cores_per_node}'
+machine_type = f'n1-highmem-{cores_per_node}'
 
 
 images = prepare_docker_images(cache_dir=config.cache_dir)

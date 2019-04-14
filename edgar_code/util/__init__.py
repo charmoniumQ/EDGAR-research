@@ -27,3 +27,21 @@ def generator_to_list(f):
     def f_(*args, **kwargs):
         return list(f(*args, **kwargs))
     return f_
+
+
+def invert(dct):
+    return {value: key for key, value in dct.items()}
+
+
+def dicts2csr(dicts, width=0):
+    from scipy.sparse import csr_matrix
+    indptr = [0]
+    indices = []
+    data = []
+    for dct in dicts:
+        for ind, val in dct.items():
+            width = max(width, ind)
+            indices.append(ind)
+            data.append(val)
+        indptr.append(len(indices))
+    return scipy.sparse.csr_matrix((data, indices, indptr), shape)

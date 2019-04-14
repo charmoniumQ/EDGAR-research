@@ -28,4 +28,4 @@ dask_client.upload_file(local_egg_path)
 sys.path.insert(0, local_egg_path)
 
 
-importlib.import_module(run_module)
+importlib.import_module(run_module).main()

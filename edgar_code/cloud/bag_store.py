@@ -5,37 +5,6 @@ import toolz
 import shutil
 
 
-def safe_name(obj):
-    '''
-Safe names are compact, unique, urlsafe, and equal when the objects are equal
-
-str does not work because x == y does not imply str(x) == str(y).
-
-    >>> a = dict(d=1, e=1)
-    >>> b = dict(e=1, d=1)
-    >>> a == b
-    True
-    >>> str(a) == str(b)
-    False
-'''
-    if isinstance(obj, int):
-        return str(obj)
-    elif isinstance(obj, float):
-        return str(round(obj, 3))
-    elif isinstance(obj, str):
-        return urllib.parse.quote(repr(obj))
-    elif isinstance(obj, tuple):
-        return '%2C'.join(map(safe_name, obj))
-    elif isinstance(obj, dict):
-        contents = '%2C'.join(
-            safe_name(key) + '%3A' + safe_name(val)
-            for key, val in sorted(obj.items())
-        )
-        return '%7B' + contents + '%7D'
-    else:
-        raise TypeError()
-
-
 class BagStore(cache.ObjectStore):
     def __init__(self, bag_path, name, serializer=None):
         super().__init__(name)
@@ -49,7 +18,7 @@ class BagStore(cache.ObjectStore):
         if kwargs:
             args = args + (kwargs,)
         try:
-            name = safe_name(args)
+            name = cache.safe_name(args)
         except TypeError:
             name = str(hash(hashable(args)))
         return self.bag_path / name

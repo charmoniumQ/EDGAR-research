@@ -88,7 +88,10 @@ class ObjectStore(collections.UserDict):
 
     @classmethod
     def to_key(Class, args, kwargs):
-        return hashable((args, kwargs))
+        # return hashable((args, kwargs))
+        if kwargs:
+            args = args + (kwargs,)
+        return safe_name(args)
 
 
 class FileStore(ObjectStore):
@@ -100,7 +103,7 @@ class FileStore(ObjectStore):
             import pickle
             serializer = pickle
         self.serializer = serializer
-        self.cache_path = pathify(cache_path) / (name + '_cache.pickle')
+        self.cache_path = pathify(cache_path) / (self.name + '_cache.pickle')
 
         if self.cache_path.exists():
             if load_msg:
@@ -143,13 +146,12 @@ class DirectoryStore(ObjectStore):
             import pickle
             serializer = pickle
         self.serializer = serializer
-        self.obj_path = pathify(object_path) / name
+        self.obj_path = pathify(object_path) / self.name
 
     def to_key(self, args, kwargs):
-        # hash is included for correctness;
-        # str(args) + str(kwargs) is not guarunteed to be unique
-        h = hash(hashable((args, kwargs)))
-        fname = urllib.parse.quote(f'{h}.pickle', safe='')
+        if kwargs:
+            args = args + (kwargs,)
+        fname = urllib.parse.quote(f'{safe_name(args)}.pickle', safe='')
         return self.obj_path / fname
 
     def __setitem__(self, path, obj):
@@ -178,7 +180,7 @@ def hashable(obj):
     except:
         if hasattr(obj, 'items'):
             # turn dictionaries into frozenset((key, val))
-            return (sorted((key, hashable(val))) for key, val in obj.items())
+            return tuple(sorted((key, hashable(val))) for key, val in obj.items())
         elif hasattr(obj, '__iter__'):
             # turn iterables into tuples
             return tuple(hashable(val) for val in obj)
@@ -186,6 +188,37 @@ def hashable(obj):
             raise TypeError(f"I don't know how to hash {obj} ({type(obj)})")
     else:
         return obj
+
+
+def safe_name(obj):
+    '''
+Safe names are compact, unique, urlsafe, and equal when the objects are equal
+
+str does not work because x == y does not imply str(x) == str(y).
+
+    >>> a = dict(d=1, e=1)
+    >>> b = dict(e=1, d=1)
+    >>> a == b
+    True
+    >>> str(a) == str(b)
+    False
+'''
+    if isinstance(obj, int):
+        return str(obj)
+    elif isinstance(obj, float):
+        return str(round(obj, 3))
+    elif isinstance(obj, str):
+        return urllib.parse.quote(repr(obj))
+    elif isinstance(obj, tuple):
+        return '%2C'.join(map(safe_name, obj))
+    elif isinstance(obj, dict):
+        contents = '%2C'.join(
+            safe_name(key) + '%3A' + safe_name(val)
+            for key, val in sorted(obj.items())
+        )
+        return '%7B' + contents + '%7D'
+    else:
+        raise TypeError()
 
 
 def pathify(obj):

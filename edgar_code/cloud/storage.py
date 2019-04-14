@@ -13,6 +13,8 @@ import google.cloud.storage
 # TODO: config
 # GOOGLE_APPLICATION_CREDENTIALS=edgar_deploy/main-722.service_account.json python3 -m edgar_code.executables.get_all_rfs
 
+client = google.cloud.storage.Client()
+
 
 @dataclass()
 class GSPath(object):
@@ -32,10 +34,9 @@ class GSPath(object):
         return Class(url.netloc, url.path[1:])
 
     def __init__(self, bucket, path):
-        self.client = google.cloud.storage.Client()
         self.path = Path(path)
         if isinstance(bucket, str):
-            bucket = self.client.bucket(bucket)
+            bucket = client.bucket(bucket)
         self.bucket = bucket
         self.blob = self.bucket.blob(str(self.path))
 
@@ -43,9 +44,8 @@ class GSPath(object):
         return {'path': self.path, 'bucket': self.bucket.name}
 
     def __setstate__(self, data):
-        self.client = google.cloud.storage.Client()
         self.path = data['path']
-        self.bucket = self.client.bucket(data['bucket'])
+        self.bucket = client.bucket(data['bucket'])
         self.blob = self.bucket.blob(str(self.path))
 
     def __truediv__(self, other):
@@ -77,17 +77,23 @@ class GSPath(object):
         for blob in self.bucket.list_blobs(prefix=f'{self.path!s}/'):
             yield GSPath.from_blob(blob)
 
-    def open(self, flags):
-        if flags == 'wb':
-            return WGSFile(self)
-        elif flags == 'rb':
-            return RGSFile(self)
+    def open(self, flags, encoding='utf-8'):
+        if 'w' in flags:
+            if 'b' in flags:
+                return WGSFile(self, flags)
+            else:
+                return io.TextIOWrapper(WGSFile(self, flags), encoding=encoding, errors='strict')
+        elif 'r' in flags:
+            if 'b' in flags:
+                return io.BytesIO(self.blob.download_as_string())
+            else:
+                return io.StringIO(self.blob.download_as_string().decode(encoding))
         else:
             raise RuntimeError(f'Flag {flags} not supported')
 
 
 class WGSFile(io.BytesIO):
-    def __init__(self, gs_path: GSPath):
+    def __init__(self, gs_path: GSPath, flags: str):
         self.gs_path = gs_path
 
     def close(self):
@@ -95,11 +101,7 @@ class WGSFile(io.BytesIO):
         super().close()
 
 
-class RGSFile(io.BytesIO):
-    def __init__(self, gs_path: GSPath):
-        self.gs_path = gs_path
-        super().__init__(self.gs_path.blob.download_as_string())
-        self.seek(0)
-
-    def close(self):
-        super().close()
+def copy(in_path, out_path):
+    with in_path.open('rb') as fin:
+        with out_path.open('wb') as fout:
+            fout.write(fin.read())

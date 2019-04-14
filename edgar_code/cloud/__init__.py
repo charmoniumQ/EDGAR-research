@@ -1,5 +1,5 @@
 from .kv_bag import KVBag
-from .storage import GSPath
+from .storage import GSPath, copy
 from .bag_store import BagStore
 
 

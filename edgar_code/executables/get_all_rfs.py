@@ -4,7 +4,7 @@ from edgar_code.retrieve import rfs_for
 
 
 def main():
-    for year in range(2013, 2019):
+    for year in range(2018, 2019):
     # for year in range(1993, 2019):
         for qtr in range(1, 5):
             with time_code(f'get_all_rfs({year}, {qtr})'):
@@ -22,5 +22,5 @@ def main():
                 sys.stdout.flush()
 
 
-if __name__ == '__main__' or True:
+if __name__ == '__main__':
     main()

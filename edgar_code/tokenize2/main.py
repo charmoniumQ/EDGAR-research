@@ -6,7 +6,7 @@ from .text import text2paragraphs
 from .paragraphs import paragraph2sentences_func
 from .sentences import sentence2clauses
 from .clauses import clause2words
-from .word import word2stem
+from .word import word2stem, is_word, is_significant_word
 from .groups import paragraphs2groups
 
 
@@ -68,11 +68,11 @@ import nltk.tokenize
 
 def text2ws_counts(text):
     words = nltk.tokenize.word_tokenize(text)
+    counter = collections.Counter()
+    unstem = collections.defaultdict(set)
     for word in words:
-        counter = collections.Counter()
-        unstem = collections.defaultdict(set)
         if is_word(word) and is_significant_word(word):
             stem = word2stem(word)
             counter[stem] += 1
-            unstem[stem].add(word)
-    return counter, unstem
+            unstem[stem].add(word.lower())
+    return counter, unstem, sum(map(len, words)), len(words)

@@ -22,4 +22,4 @@ RUN pip3 install https://github.com/charmoniumQ/distributed/archive/issue-1819.z
 
 # For now it is verbatim copied from ${PROJECT_ROOT}/edgar_code/requirements.txt
 RUN pip3 install dask[bag] google-cloud-storage requests toolz cloudpickle nltk
-RUN python3 -c "import nltk; nltk.download('stopwords')"
+RUN python3 -c "import nltk; nltk.download('stopwords'); nltk.download('punkt')"

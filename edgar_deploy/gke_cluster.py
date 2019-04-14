@@ -17,7 +17,9 @@ import kubernetes
 
 
 class GKECluster(FileProvisionedResource):
-    def __init__(self, nodecount=1, cache_dir=None, name=None, machine_type='n1-standard-1'):
+    def __init__(self, nodecount=1, cache_dir=None, name=None, machine_type=None):
+        if machine_type is None:
+            raise RuntimeError()
         self.nodecount = nodecount
         self.name = name
         self.name_path = f'projects/{config.gcloud.project}/locations/{config.gcloud.fq_zone}/clusters/{self.name}'
@@ -47,7 +49,6 @@ class GKECluster(FileProvisionedResource):
             node_config=google.cloud.container_v1.types.NodeConfig(
                 # Consider changing this for cost-effectiveness
                 machine_type=machine_type,
-                # machine_type='n1-standard-1',
                 # in GB, minimum is 10
                 disk_size_gb=10,
                 # TODO: examine the effect of this

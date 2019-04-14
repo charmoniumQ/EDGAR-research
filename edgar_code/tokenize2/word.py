@@ -8,7 +8,7 @@ def word2stem(word):
     return stemmer.stem(word)
 
 
-word_regex = re.compile('^[a-z]*$', re.IGNORE_CASE)
+word_regex = re.compile('^[a-z]*$', re.IGNORECASE)
 def is_word(word):
     match = word_regex.match(word)
     if match:

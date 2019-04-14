@@ -36,17 +36,17 @@ def main():
                 )
                 counter = collections.Counter(results.values())
                 print(f'{year} {qtr} {counter[1]} bad main_text {counter[2]} bad rfs')
-                with (results_path / f'parse_errors_for_{year}_{qtr}.csv').open('wb') as f:
+                with (results_path / 'parse_errors' / f'{year}_{qtr}.csv').open('w') as f:
+                    csvw = csv.writer(f)
                     for index, result in results.items():
-                        f.write(','.join([
+                        csvw.writerow([
                             str(index.year),
                             str(index.qtr),
                             index.company_name,
                             index.url,
-                            str(result) if isinstance(result, int) else 0,
-                            len(result) if isinstance(result, str) else 0,
-                        ]).encode())
-                        f.write(b'\n')
+                            str(result) if isinstance(result, int) else '0',
+                            str(len(result)) if isinstance(result, str) else '0',
+                        ])
 
 
 if __name__ == '__main__' or True:

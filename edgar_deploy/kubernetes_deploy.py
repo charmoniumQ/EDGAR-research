@@ -80,7 +80,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
             'n_workers': str(n_workers),
             'dask_scheduler_address': f'tcp://scheduler:{ports["scheduler"]}',
             'run_name': config.run_name,
-            'run_module': 'edgar_code.executables.get_all_rfs',
+            'run_module': 'edgar_code.executables.tokenize_rfs',
             'namespace': namespace
         }.items()
     ]
@@ -145,7 +145,8 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
         ),
     )
 
-    memory = int(0.3e6)
+    memory = int(2e6)
+    # memory = int(0.3e6)
     kube_v1beta.create_namespaced_deployment(
         namespace,
         kubernetes.client.ExtensionsV1beta1Deployment(
@@ -171,7 +172,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                                 name='worker',
                                 image=images['worker'].result(),
                                 command=[
-                                    '/bin/sh', '-c', 'dask-worker ${dask_scheduler_address}', '--memory-limit', str(memory * 1024),
+                                    '/bin/sh', '-c', 'dask-worker ${dask_scheduler_address}', '--memory-limit', str(int(memory * 1024 * 0.5)),
                                     # TODO: nprocs
                                     # TODO: nthreads
                                 ],

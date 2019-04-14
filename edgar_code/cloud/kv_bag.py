@@ -22,6 +22,7 @@ class KVBag(dask.bag.Bag):
         def mapper(pair):
             return (func(pair[0]), pair[1])
         mapper.__name__ = f'KVBag.map({func.__qualname__})'
+        return self.map(mapper)
 
     # def enumerate(self):
     #     def tupler(*args):
