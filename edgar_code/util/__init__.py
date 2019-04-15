@@ -45,3 +45,23 @@ def dicts2csr(dicts, width=0):
             data.append(val)
         indptr.append(len(indices))
     return scipy.sparse.csr_matrix((data, indices, indptr), shape)
+
+def generator2iterator(generator, length=None):
+    class Iterator(object):
+        def __init__(self):
+            self.length = length
+        def __iter__(self):
+            if self.length is not None:
+                yield from generator()
+            else:
+                length = 0
+                for e in generator():
+                    length += 1
+                    yield e
+                self.length = length
+        def __len__(self):
+            if self.length is not None:
+                return self.length
+            else:
+                raise RuntimeError('len not known yet')
+    return Iterator()

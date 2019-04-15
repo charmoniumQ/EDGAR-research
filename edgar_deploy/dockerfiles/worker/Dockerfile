@@ -7,7 +7,7 @@ ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 RUN chmod +x /tini
 ENTRYPOINT ["/tini", "--"]
 
-RUN apt-get -y update && apt-get -y install gcc
+RUN apt-get -y update && apt-get -y install gcc g++ gfortran pkg-config libopenblas-dev libfreetype6-dev libpng-dev
 
 RUN pip3 install https://github.com/charmoniumQ/distributed/archive/issue-1819.zip
 
@@ -21,5 +21,6 @@ RUN pip3 install https://github.com/charmoniumQ/distributed/archive/issue-1819.z
 # RUN pip3 install -r /app/requirements.txt
 
 # For now it is verbatim copied from ${PROJECT_ROOT}/edgar_code/requirements.txt
-RUN pip3 install dask[bag] google-cloud-storage requests toolz cloudpickle nltk
+RUN pip3 install dask[bag] google-cloud-storage requests toolz cloudpickle nltk numpy
+RUN pip3 install scipy sklearn gensim matplotlib
 RUN python3 -c "import nltk; nltk.download('stopwords'); nltk.download('punkt')"

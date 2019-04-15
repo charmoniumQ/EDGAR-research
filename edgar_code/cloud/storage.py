@@ -68,6 +68,7 @@ class GSPath(object):
             path.unlink()
 
     def exists(self):
+        # print(f'{self.blob.name} exists? {self.blob.exists()}')
         return self.blob.exists()
 
     def unlink(self):
@@ -84,10 +85,26 @@ class GSPath(object):
             else:
                 return io.TextIOWrapper(WGSFile(self, flags), encoding=encoding, errors='strict')
         elif 'r' in flags:
+            import time
             if 'b' in flags:
-                return io.BytesIO(self.blob.download_as_string())
+                for i in range(10):
+                    try:
+                        return io.BytesIO(self.blob.download_as_string())
+                    except Exception as e:
+                        if i == 9:
+                            raise e
+                        else:
+                            time.sleep(6)
+                    
             else:
-                return io.StringIO(self.blob.download_as_string().decode(encoding))
+                for i in range(10):
+                    try:
+                        return io.BytesIO(self.blob.download_as_string().decode())
+                    except Exception as e:
+                        if i == 9:
+                            raise e
+                        else:
+                            time.sleep(6)
         else:
             raise RuntimeError(f'Flag {flags} not supported')
 
@@ -101,7 +118,16 @@ class WGSFile(io.BytesIO):
         super().close()
 
 
+from pathlib import Path
+def pathify(path):
+    if isinstance(path, str):
+        return Path(path)
+    else:
+        # assume already path-y
+        return path
+
+
 def copy(in_path, out_path):
-    with in_path.open('rb') as fin:
-        with out_path.open('wb') as fout:
+    with pathify(in_path).open('rb') as fin:
+        with pathify(out_path).open('wb') as fout:
             fout.write(fin.read())

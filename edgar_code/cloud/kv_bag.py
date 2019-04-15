@@ -62,6 +62,10 @@ class KVBag(dask.bag.Bag):
             return pair[0]
         return super().map(keys_picker)
 
+    @classmethod
+    def concat(Class, bags):
+        Class.from_bag(dask.bag.concat(bags))
+
     # public constructors. use these insead of __init__
 
     @classmethod

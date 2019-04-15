@@ -80,7 +80,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
             'n_workers': str(n_workers),
             'dask_scheduler_address': f'tcp://scheduler:{ports["scheduler"]}',
             'run_name': config.run_name,
-            'run_module': 'edgar_code.executables.tokenize_rfs',
+            'run_module': 'edgar_code.executables.tokenize_rfs2',
             'namespace': namespace
         }.items()
     ]
@@ -145,7 +145,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
         ),
     )
 
-    memory = int(2e6)
+    memory = int(2.5e6)
     # memory = int(0.3e6)
     kube_v1beta.create_namespaced_deployment(
         namespace,
@@ -215,6 +215,12 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                                 ],
                                 volume_mounts=[secret_volume_mount],
                                 env=env_vars,
+                                resources=kubernetes.client.V1ResourceRequirements(
+                                    requests=dict(
+                                        cpu='550m',
+                                        memory=f'{memory}Ki',
+                                    ),
+                                ),
                             ),
                         ],
                         volumes=[secret_volume],
@@ -227,7 +233,5 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
 
 # ns=$(kubectl get namespaces -o 'jsonpath={.items[*].metadata.name}' --field-selector 'status.phase==Active' | egrep 'edgar-[a-z]*' -o)
 # kubectl -n ${ns} logs -f $(kubectl -n ${ns} get -o 'jsonpath={.items[].metadata.name}' pods -l job-name=job)
-# kubectl -n ${ns} port-forward $(kubectl -n ${ns} get -o 'jsonpath={.items[].metadata.name}' pods -l deployment=scheduler) 8787:8787
-# kubectl -n ${ns} logs -f $(kubectl -n ${ns} get -o 'jsonpath={.items[].metadata.name}' pods -l deployment=scheduler)
-# kubectl -n ${ns} logs -f $(kubectl -n ${ns} get -o 'jsonpath={.items[0].metadata.name}' pods -l deployment=worker)
-# kubectl -n ${ns} describe pod $(kubectl -n ${ns} get -o 'jsonpath={.items[0].metadata.name}' pods -l deployment=worker)
+# kubectl -n ${ns} delete po $(kubectl -n ${ns} get po -o json | jq -r '.items[] | select(.status.podIP == "10.16.3.7") | .metadata.name')
+# while kubectl -n ${ns} get po | grep Pending > /dev/null; do sleep 5; done ; kubectl -n ${ns} logs -f $(kubectl -n ${ns} get -o 'jsonpath={.items[0].metadata.name}' pods -l job-name=job) ; ntfy -b telegram send 'job done

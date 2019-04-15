@@ -7,7 +7,7 @@ ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 RUN chmod +x /tini
 ENTRYPOINT ["/tini", "--"]
 
-RUN apt-get -y update && apt-get -y install gcc g++ gfortran libopenblas-dev
+RUN apt-get -y update && apt-get -y install gcc g++ gfortran pkg-config libopenblas-dev libfreetype6-dev libpng-dev
 
 RUN pip3 install dask[bag] google-cloud-storage https://github.com/charmoniumQ/distributed/archive/issue-1819.zip
 
@@ -16,6 +16,6 @@ ADD runner.py /work/runner.py
 
 # see worker/Dockerfile
 RUN pip3 install dask[bag] google-cloud-storage requests toolz cloudpickle nltk numpy
-RUN pip3 install scipy sklearn gensim
+RUN pip3 install scipy sklearn gensim matplotlib
+RUN pip3 install tqdm memory_profiler
 RUN python3 -c "import nltk; nltk.download('stopwords'); nltk.download('punkt')"
-RUN pip3 install memory_profiler

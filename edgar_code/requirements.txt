@@ -4,3 +4,10 @@ requests
 toolz
 cloudpickle
 nltk
+numpy
+scipy
+sklearn
+gensim
+memory_profiler
+matplotlib
+PyQt5

@@ -6,7 +6,7 @@ from .text import text2paragraphs
 from .paragraphs import paragraph2sentences_func
 from .sentences import sentence2clauses
 from .clauses import clause2words
-from .word import word2stem, is_word, is_significant_word
+from .word import word2stem, is_word, is_significant_word, normalize
 from .groups import paragraphs2groups
 
 
@@ -71,8 +71,10 @@ def text2ws_counts(text):
     counter = collections.Counter()
     unstem = collections.defaultdict(set)
     for word in words:
-        if is_word(word) and is_significant_word(word):
+        word = normalize(word)
+        if is_significant_word(word):
             stem = word2stem(word)
             counter[stem] += 1
-            unstem[stem].add(word.lower())
+            unstem[stem].add(word)
+    # counter = {stem: count for stem, count in counter.items() if count > 1}
     return counter, unstem, sum(map(len, words)), len(words)

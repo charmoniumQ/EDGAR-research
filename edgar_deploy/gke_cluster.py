@@ -17,9 +17,7 @@ import kubernetes
 
 
 class GKECluster(FileProvisionedResource):
-    def __init__(self, nodecount=1, cache_dir=None, name=None, machine_type=None):
-        if machine_type is None:
-            raise RuntimeError()
+    def __init__(self, nodecount=1, cache_dir=None, name=None, machine_type='n1-standard-1'):
         self.nodecount = nodecount
         self.name = name
         self.name_path = f'projects/{config.gcloud.project}/locations/{config.gcloud.fq_zone}/clusters/{self.name}'
