@@ -40,6 +40,10 @@ def prepare_docker_image(dockerfolder):
             # TODO: does this need cache_from=[tag]
         )[-1]
 
+        # TODO; get intermediate output
+        # for line in output:
+        #     print(line)
+
         client.images.push(tag)
 
         return tag

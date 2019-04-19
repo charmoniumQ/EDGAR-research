@@ -11,7 +11,6 @@ bucket_name = os.environ['google_storage_bucket']
 run_module = os.environ['run_module']
 namespace = os.environ['namespace']
 
-
 dask_client = dask.distributed.Client(scheduler_address)
 
 

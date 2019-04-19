@@ -11,11 +11,12 @@ RUN apt-get -y update && apt-get -y install gcc g++ gfortran pkg-config libopenb
 
 RUN pip3 install dask[bag] google-cloud-storage https://github.com/charmoniumQ/distributed/archive/issue-1819.zip
 
-ADD wait_for_scheduler.py /work/wait_for_scheduler.py
-ADD runner.py /work/runner.py
-
 # see worker/Dockerfile
 RUN pip3 install dask[bag] google-cloud-storage requests toolz cloudpickle nltk numpy
-RUN pip3 install scipy sklearn gensim matplotlib
+RUN pip3 install scipy sklearn matplotlib Pyro4
 RUN pip3 install tqdm memory_profiler
 RUN python3 -c "import nltk; nltk.download('stopwords'); nltk.download('punkt')"
+RUN pip3 install https://github.com/charmoniumQ/gensim/archive/develop2.zip
+
+ADD wait_for_scheduler.py /work/wait_for_scheduler.py
+ADD runner.py /work/runner.py

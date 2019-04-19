@@ -1,9 +1,20 @@
+import traceback
+import signal
+import sys
+import os
+def handle_signal(signal, frame):
+    for line in traceback.format_stack(frame):
+        print(line, file=sys.stderr, end='')
+
+signal.signal(signal.SIGUSR1, handle_signal)
+print(f'For stacktrace: kill -s SIGUSR1 {os.getpid()}', file=sys.stderr)
+
 import dask.bag
 import itertools
+import logging
+logging.basicConfig(level=logging.INFO)
 #from memory_profiler import profile
 profile = lambda x: x
-import gc
-import sys
 import collections
 from edgar_code.util import invert, generator2iterator
 from edgar_code.util.time_code import time_code
@@ -12,7 +23,7 @@ from edgar_code.data.events import events
 from edgar_code.data.stop_stems import stop_stems
 from edgar_code.tokenize2.main import text2paragraphs, text2ws_counts
 from edgar_code.cloud import cache_path, results_path, BagStore, copy
-from edgar_code.util.cache import Cache, DirectoryStore
+from edgar_code.util.cache import Cache, DirectoryStore, FileStore
 
 
 @Cache.decor(BagStore.create(cache_path / 'bags'), miss_msg=True, hit_msg=True)
@@ -23,6 +34,9 @@ def section_word_stems_for(year, qtr):
     def index_to_keys(oldkey):
         index, n = oldkey
         return (index.year, index.CIK, n)
+    def acceptable_doc(doc):
+        # at least this many important words to be acceptable
+        return len(doc[0]) > 50
     return (
         rfs_for(year, qtr)
         .filter_values(is_good_rf)
@@ -30,9 +44,10 @@ def section_word_stems_for(year, qtr):
         .flatten_values()
         .map_keys(index_to_keys)
         .map_values(text2ws_counts)
+        .filter_values(acceptable_doc)
     )
 
-take_frac = 0.20
+take_frac = 0.18
 
 
 # this is a DirectoryStore because a file store would be loaded eagerly when this module is imported
@@ -46,7 +61,7 @@ def compute_some_words(year, qtr):
         unstem_map = collections.defaultdict(collections.Counter)
         # TODO: unstem_map in section_word_stems_for should be counter
         counter = collections.Counter()
-        for (year, CIK, paragraph_no), (counter_i, unstem_map_i, length_i, n_words_i) in partition:
+        for (year, CIK, paragraph_no), (counter_i, unstem_map_i, length_i) in partition:
             keys.append((year, CIK, paragraph_no))
             paragraph_lengths.append(length_i)
             for stem, words_set in unstem_map_i.items():
@@ -111,35 +126,29 @@ def compute_all_words():
 # can't cache this if generator
 # must be generator because won't fit in memory
 #@Cache.decor(DirectoryStore.create(cache_path / 'cache'), miss_msg=True)
-def big_corpus(really_compute=True):
+@Cache.decor(DirectoryStore.create(cache_path / 'cache'), miss_msg=True, hit_msg=True)
+def corpus_for(year):
     keys, unstem_map, paragraph_lengths, int2word, word2int = compute_all_words()
 
     def get_bow(value):
-        counter, unstem_map, length, words = value
+        counter, unstem_map, length = value
         return [(word2int[word], count) for word, count in counter.items() if word in word2int]
 
-    @Cache.decor(DirectoryStore.create(cache_path / 'cache'), miss_msg=True, hit_msg=True)
-    def corpus_for(year):
-        corpus2 = []
-        for qtr in range(1, 5):
-                corpus2.extend(list(
-                    section_word_stems_for(year, qtr)
-                    .values()
-                    .map(get_bow)
-                ))
-        return corpus2
+    corpus2 = []
+    for qtr in range(1, 5):
+        corpus2.extend(list(
+            section_word_stems_for(year, qtr)
+            .values()
+            .map(get_bow)
+        ))
+    return corpus2
 
-    big_corpus.corpus_for = corpus_for
-
-    if not really_compute:
-        return
-
+@generator2iterator
+def corpus():
     with time_code('big_corpus'):
         for year in range(2006, 2019):
             with time_code(f'corpus_for {year}'):
                 yield from corpus_for(year)
-
-corpus = generator2iterator(big_corpus)
 
 @Cache.decor(DirectoryStore.create(cache_path / 'cache'), miss_msg=True, hit_msg=True)
 @profile
@@ -151,10 +160,12 @@ def compute_tfidf():
         tfidf = TfidfModel(corpus, smartirs='ltc', id2word=int2word)
     return tfidf
 
+import os
 @Cache.decor(DirectoryStore.create(cache_path / 'cache'), miss_msg=True, hit_msg=True)
 @profile
 def compute_lda():
-    from gensim.models.ldamulticore import LdaMulticore
+    # from gensim.models.ldamulticore import LdaMulticore
+    from gensim.models.lsimodel import LsiModel
 
     keys, unstem_map, paragraph_lengths, int2word, word2int = compute_all_words()
 
@@ -164,85 +175,166 @@ def compute_lda():
         for doc in iter(corpus):
             pass
 
+    host = os.environ.get('pyro_ns_host', None)
+    port = int(os.environ.get('pyro_ns_port', 0)) or None
+
     tfidf = compute_tfidf()
     with time_code('compute_lda'):
         corpus_tfidf = tfidf[corpus]
-        lda = LdaMulticore(corpus_tfidf, num_topics=500, id2word=int2word, workers=None)
+        lda = LsiModel(corpus_tfidf, num_topics=500, id2word=int2word, distributed=True, ns_conf=dict(
+            host=host, port=port, broadcast=port and host,
+        ))
+        # lda = LdaMulticore(corpus_tfidf, num_topics=500, id2word=int2word, workers=None)
 
     return lda
 
-@Cache.decor(BagStore.create(cache_path / 'cache'), miss_msg=True, hit_msg=True)
-@profile
-def compute_topics(year):
-    tfidf = compute_tfidf()
-    lda = compute_lda()
-    big_corpus(really_compute=False)
-    with time_code(f'compute_topics {year}'):
-        return (
-            big_corpus.corpus_for(year)
-            .map(lambda doc: lda[tfidf[doc]])
-        )
-
 
 import csv
+from edgar_code.tokenize2.word import word2stem
+import numpy as np
 def main_sub4():
     '''queries topics for events'''
     keys, unstem_map, paragraph_lengths, int2word, word2int = compute_all_words()
     tfidf = compute_tfidf()
     lda = compute_lda()
+    topic_mat = lda.get_topics()
 
-    with (results_path / 'topics' / 'all.txt').open('w') as fil:
-        n_topics, n_words = lda.get_topics()
+    with (results_path / 'all.csv').open('w') as filw:
+        csvw = csv.writer(filw)
+        n_topics, n_words = topic_mat.shape
         for topic_no in range(n_topics):
-            fil.write(f'{topic_no}: {lda.print_topic(topic, topn=30)}\n')
+            topic = topic_mat[topic_no]
+            word_ids = np.argsort(topic)[-50:][::-1]
+            row = [str(topic_no)]
+            for word_id in word_ids:
+                row.append(f'{topic[word_id]:.02f}')
+                row.append(int2word[word_id])
+            csvw.writerow(row)
 
-    with (results_path / 'topics' / 'query.txt').open('w') as filw:
+    with (results_path / 'query.csv').open('w') as filw:
         csvw = csv.writer(filw)
         for query_words in events:
-            query_corpus = [(word2int[word], count) for word, count in collections.Counter(query_words) if word in word2int]
+            query_stems = map(word2stem, query_words)
+            query_corpus = [
+                (word2int[word], count)
+                for word, count in collections.Counter(query_stems).items()
+                if word in word2int
+            ]
             query_topics = lda[tfidf[query_corpus]]
-            for topic_no, topic in query_topics.print_topics(num_topics=3, num_words=30):
-                csvw.writerow(query_words + ['', str(topic_no), ''] + [word for word, value in topic])
+            query_topics = sorted(query_topics, key=lambda pair: pair[1])
+            row = query_words
+            for topic_no, val in query_topics[:5]:
+                row.append(str(topic_no))
+                row.append(str(round(val, 2)))
+            csvw.writerow(row)
 
-@Cache.decor(DirectoryStore.create(cache_path / 'cache'), miss_msg=True)
-def compute_year_topic():
-    import numpy as np
-    keys, unstem_map, paragraph_lengths, int2word, word2int = compute_all_words()
-    tfidf = compute_tfidf()
-    lda = compute_lda()
+# TODO: remove
+n_topics, n_words = (500, 10203)
+_, _, paragraph_lengths, _, _ = compute_all_words()
 
-    n_topics, n_words = lda.get_topics()
-    year_topic = np.zeros((2019-2006, n_topics))
-    docs_per_year = np.zeros((2019-2006))
-    last_i = 0
-    for year in range(2006, 2019):
-        for topic_vec, key, weight in zip(compute_topics(year), keys[i:], paragraph_lengths[i:]):
-            last_i += 1
+@Cache.decor(DirectoryStore.create(cache_path / 'cache'), miss_msg=True, hit_msg=True)
+def compute_year_topic2(year, qtr):
+
+    def get_word2int():
+        return compute_all_words()[-1]
+
+    def get_bow(value):
+        word2int = Cache(FileStore('cache/'), get_word2int, hit_msg=True, miss_msg=True)
+        counter, unstem_map, length = value
+        return [(word2int[word], count) for word, count in counter.items() if word in word2int]
+
+    def to_topic_vecs(bow):
+        tfidf = Cache(FileStore('cache/'), compute_tfidf, hit_msg=True, miss_msg=True)
+        lda = Cache(FileStore('cache/'), compute_lda, hit_msg=True, miss_msg=True)
+        return list(lda[tfidf[bow]])
+
+    def perpartition(partition):
+        topic_weighted, topic_unweighted, weights, docs = \
+            np.zeros(n_topics), np.zeros(n_topics), 0, 0
+        for topic_vec, weight in partition:
             for topic, val in topic_vec:
-                year_topic[year - 2006, topic] += val * paragaph_length
-                docs_per_year[year - 2006] += 1
-    return year_topic, docs_per_year
+                topic_weighted[topic] += val * weight
+                weights += weight
+                topic_unweighted[topic] += val
+                docs += 1
+        return topic_weighted, topic_unweighted, weights, docs
 
-def stats_for_year_topic(year_topic, docs_per_year):
+    def aggregate(partitions):
+        topic_weighted, topic_unweighted, weights, docs = \
+            np.zeros(n_topics), np.zeros(n_topics), 0, 0
+        for topic_weighted_i, topic_unweighted_i, weights_i, docs_i in partitions:
+            topic_weighted += topic_weighted_i
+            topic_unweighted += topic_unweighted_i
+            weights += weights_i
+            docs += docs_i
+        return topic_weighted, topic_unweighted, weights, docs
+
+    # note paragraph_lengths is computed outside this function
+    bag = (
+        dask.bag.zip(
+            (
+                section_word_stems_for(year, qtr)
+                .values()
+                .map(get_bow)
+                .map(to_topic_vecs)
+            ),
+            dask.bag.from_sequence(paragraph_lengths, npartitions=section_word_stems_for(year, qtr).npartitions),
+        )
+        .reduction(perpartition, aggregate)
+    )
+
+    with time_code('exec bag'):
+        return bag.compute(optimize=True)
+
+
+def compute_all_year_topics():
+    year_topics_weighted, year_topics_unweighted, year_weights, year_docs = \
+        np.zeros(((2019-2006) * 4, n_topics)), np.zeros(((2019-2006) * 4, n_topics)), np.zeros(((2019-2006) * 4,)), np.zeros(((2019-2006) * 4,))
+    for year in range(2006, 2019):
+        for qtr in range(1, 5):
+            topics_weighted, topics_unweighted, weights, docs = compute_year_topic2(year, qtr)
+            year_topics_weighted[(year - 2006) * 4 + qtr, :] = topics_weighted
+            year_topics_unweighted[(year - 2006) * 4 + qtr, :] = topics_unweighted
+            year_weights[(year - 2006) * 4 + qtr] = weights
+            year_docs[(year - 2006) * 4 + qtr] = docs
+    return year_topic_weighted, year_topic_unweighted, year_weights, year_docs
+
+def stats_for_year_topic(year_topic_weighted, year_topic_unweighted, year_weights, year_docs):
     '''plots topics over time'''
     import numpy as np
     import matplotlib.pyplot as plt
-    year_topic_avg = year_topic / docs_per_year[:, np.newaxis]
+    year_topic_avg = year_topic_weighted / year_weights[:, np.newaxis].clip(1, None)
+    year_topic_avg2 = year_topic_unweighted / year_docs[:, np.newaxis].clip(1, None)
 
     def mapper(topic_no):
-        fig = plt.figure()
-        ax = fig.axes()
-        ax.plot(np.arange(2006, 2019), year_topic_avg)
-        ax.set_xticks(np.arange(2006, 2019))
-        ax.set_xlabel('Year')
-        ax.set_ylabel('Prevalence')
-        ax.set_title('Topic {topic_no}')
-        out_path = f'topic_{topic_no}.png'
-        fig.savefig(out_path)
-        copy(out_pat, results_path / 'topics' / 'plots' / out_path)
+        fig = plt.figure(figsize=(5.75, 4))
+        ax = fig.gca()
+        ax.plot(np.arange(2006, 2019, 0.25) - 1, year_topic_avg)
+        ax.set_xticks(np.arange(2006, 2019) - 1)
+        plt.xticks(rotation=35, fontweight='bold')
+        plt.yticks(fontweight='bold')
+        # ax.set_xlabel('Year', fontweight='bold', fontsize=14)
+        ax.set_ylabel('Prevalence', fontweight='bold', fontsize=12)
+        ax.set_title(f'Topic {topic_no}', fontweight='bold', fontsize=12)
+        out_path = f'topic_weighted_{topic_no}.png'
+        fig.savefig(out_path, transparent=True, bbox_inches='tight', dpi=150)
+        copy(out_path, results_path / 'topics' / 'plots' / out_path)
+
+        fig = plt.figure(figsize=(5.75, 4))
+        ax = fig.gca()
+        ax.plot(np.arange(2006, 2019, 0.25) - 1, year_topic_avg2)
+        ax.set_xticks(np.arange(2006, 2019) - 1)
+        plt.xticks(rotation=35, fontweight='bold')
+        plt.yticks(fontweight='bold')
+        # ax.set_xlabel('Year', fontweight='bold', fontsize=14)
+        ax.set_ylabel('Prevalence', fontweight='bold', fontsize=12)
+        ax.set_title(f'Topic {topic_no}', fontweight='bold', fontsize=12)
+        out_path = f'topic_unweighted_{topic_no}.png'
+        fig.savefig(out_path, transparent=True, bbox_inches='tight', dpi=150)
+        copy(out_path, results_path / 'topics' / 'plots' / out_path)
 
     (
-        dask.bag.range(year_topic.shape[1])
+        dask.bag.range(year_topic_avg.shape[1], npartitions=40)
         .map(mapper)
         .compute()
     )
@@ -295,8 +387,11 @@ def stats_for_unstem(unstem_map):
 
 
 def main():
-    main_sub4()
-    stats_for_year_topic(*compute_year_topic())
+    # main_sub4()
+    for year in range(2012, 2019):
+        for qtr in range(1, 5):
+            compute_year_topic2(year, qtr)
+    # stats_for_year_topic(*compute_all_year_topics())
 
 
 if __name__ == '__main__':

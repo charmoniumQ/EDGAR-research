@@ -1,3 +1,6 @@
+import dask.multiprocessing
+dask.config.set(scheduler='processes')  # overwrite default with multiprocessing scheduler
+
 import dask.bag
 import itertools
 #from memory_profiler import profile
@@ -118,41 +121,58 @@ def plot_events():
         vec = np.array([counter_i[word] for word in words])
         return vec
 
+    def sum1(vecs):
+        out_vec = np.zeros(len(words))
+        for vec in vecs:
+            out_vec += vec
+        return out_vec
+
     def sum2(vecs):
         out_vec = np.zeros(len(words))
         for vec in vecs:
             out_vec += vec
         return out_vec
 
+    @Cache.decor(DirectoryStore.create(cache_path / 'cache'), miss_msg=True, hit_msg=True)
+    def important_words_for(year, qtr):
+        return (
+            section_word_stems_for(year, qtr)
+            .map(mapper)
+            .reduction(sum1, sum2)
+            .compute()
+        )
+
     years = list(range(2006, 2019))
     data = np.zeros((len(years) * 4, len(words)))
     for year in years:
         for qtr in range(1, 5):
-            data[(year - 2006) * 4 + qtr, :] = (
-                section_word_stems_for(year, qtr)
-                .map(mapper)
-                .reduction(sum2, sum2)
-                .compute()
-            )
+            data[(year - 2006) * 4 + (qtr - 1), :] = important_words_for(year, qtr)
 
     def mapper2(pair):
         word_i, word = pair
-        xs = np.arange(2006, 2019, 0.25)
-        ys = data[:, word_i]
+        xs = np.arange(2006, 2019) - 1
+        ys = np.zeros(len(years))
+        for year in years:
+            for qtr in range(1, 5):
+                ys[(year - 2006)] += data[(year - 2006) * 4 + (qtr - 1), word_i]
 
-        fig = plt.figure()
-        ax = fig.axes()
-        ax.plot(xs, ys)
-        ax.set_xticks(np.arange(2006, 2019))
-        ax.set_xlabel('Year')
-        ax.set_ylabel('Prevalence')
-        ax.set_title('{word}')
+        fig = plt.figure(figsize=(5.75, 4))
+        ax = fig.gca()
+        ax.plot(xs, ys, lw=2)
+        # ax.axhline(linewidth=2)
+        # ax.axvline(linewidth=2)
+        ax.set_xticks(np.arange(2006, 2019) - 1)
+        plt.xticks(rotation=35, fontweight='bold')
+        plt.yticks(fontweight='bold')
+        # ax.set_xlabel('Year', fontweight='bold', fontsize=14)
+        ax.set_ylabel('Occurences', fontweight='bold', fontsize=12)
+        ax.set_title(f'{word}*', fontweight='bold', fontsize=12)
         out_path = f'topic_{word}.png'
-        fig.savefig(out_path)
-        copy(out_path, results_path / 'topics' / 'plots' / out_path)
+        fig.savefig(out_path, transparent=True, bbox_inches='tight', dpi=150)
+        # copy(out_path, results_path / 'topics' / 'plots' / out_path)
         
     (
-        dask.bag.from_iterable(enumerate(words))
+        dask.bag.from_sequence(enumerate(words))
         .map(mapper2)
         .compute()
     )
@@ -164,3 +184,10 @@ if __name__ == '__main__':
     main()
 
 # docker build -t test edgar_deploy/dockerfiles/job && docker run -it --rm --volume ${PWD}:/w2 --workdir /w2 --memory 500Mb --env GOOGLE_APPLICATION_CREDENTIALS=/w2/edgar_deploy/main-722.service_account.json --env local_test=1 test python3 -m edgar_code.executables.tokenize_rfs
+# crimea
+# collaps
+# deepwat
+# ebola
+# foreclosur
+# influenza
+# japan

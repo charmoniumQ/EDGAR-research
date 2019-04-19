@@ -22,5 +22,6 @@ RUN pip3 install https://github.com/charmoniumQ/distributed/archive/issue-1819.z
 
 # For now it is verbatim copied from ${PROJECT_ROOT}/edgar_code/requirements.txt
 RUN pip3 install dask[bag] google-cloud-storage requests toolz cloudpickle nltk numpy
-RUN pip3 install scipy sklearn gensim matplotlib
+RUN pip3 install scipy sklearn matplotlib Pyro4
 RUN python3 -c "import nltk; nltk.download('stopwords'); nltk.download('punkt')"
+RUN pip3 install https://github.com/charmoniumQ/gensim/archive/develop2.zip

@@ -34,6 +34,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
     ports = {
         'scheduler': 8786,
         'dashboard': 8787,
+        'nameserver': 9090,
     }
 
     kube_v1 = kubernetes.client.CoreV1Api(kube_api)
@@ -80,10 +81,19 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
             'n_workers': str(n_workers),
             'dask_scheduler_address': f'tcp://scheduler:{ports["scheduler"]}',
             'run_name': config.run_name,
-            'run_module': 'edgar_code.executables.tokenize_rfs2',
-            'namespace': namespace
+            'run_module': 'edgar_code.executables.tokenize_rfs',
+            'namespace': namespace,
+            'PYRO_SERIALIZERS_ACCEPTED': 'pickle',
+            'PYRO_SERIALIZER': 'pickle',
+            'PYRO_LOGLEVEL': 'DEBUG',
+            'PYRO_THREADPOOL_SIZE': str(80),
+            'pyro_ns_host': 'scheduler',
+            'pyro_ns_port': str(ports["nameserver"]),
         }.items()
     ]
+
+    memory = int(1e7)
+    # memory = int(0.3e6)
 
     kube_v1beta.create_namespaced_deployment(
         namespace,
@@ -115,7 +125,9 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                                     for name, port in ports.items()
                                 ],
                                 command=[
-                                    '/bin/sh', '-c', f'unbuffer dask-scheduler --port {ports["scheduler"]} | unbuffer -p /app/update_status.py',
+                                    '/bin/sh', '-c',
+                                    # f'python3 -m Pyro4.naming --host=0.0.0.0 --port=${{pyro_ns_port}} & ' +
+                                    f'unbuffer dask-scheduler --port {ports["scheduler"]} | unbuffer -p /app/update_status.py',
                                 ],
                                 volume_mounts=[secret_volume_mount],
                                 env=env_vars,
@@ -144,9 +156,6 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
             ),
         ),
     )
-
-    memory = int(2.5e6)
-    # memory = int(0.3e6)
     kube_v1beta.create_namespaced_deployment(
         namespace,
         kubernetes.client.ExtensionsV1beta1Deployment(
@@ -172,7 +181,9 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                                 name='worker',
                                 image=images['worker'].result(),
                                 command=[
-                                    '/bin/sh', '-c', 'dask-worker ${dask_scheduler_address}', '--memory-limit', str(int(memory * 1024 * 0.5)),
+                                    '/bin/sh', '-c',
+                                    # f'(sleep 60 ; python3 -m gensim.models.lsi_worker --host ${{pyro_ns_host}} --port ${{pyro_ns_port}}) & ' +
+                                    f'dask-worker ${{dask_scheduler_address}} --memory-limit {int(memory * 1024 * 0.5)}',
                                     # TODO: nprocs
                                     # TODO: nthreads
                                 ],
@@ -211,13 +222,17 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                                 name='job',
                                 image=images['job'].result(),
                                 command=[
-                                    '/bin/sh', '-c', '/work/wait_for_scheduler.py && cd /work && /work/runner.py',
+                                    '/bin/sh', '-c',
+                                    f'/work/wait_for_scheduler.py && cd /work && (' +
+                                    # f'python3 -m gensim.models.lsi_dispatcher 64 --host ${{pyro_ns_host}} --port ${{pyro_ns_port}} & ' +
+                                    f'/work/runner.py)',
                                 ],
                                 volume_mounts=[secret_volume_mount],
                                 env=env_vars,
                                 resources=kubernetes.client.V1ResourceRequirements(
                                     requests=dict(
-                                        cpu='550m',
+                                        cpu='450m',
+                                        # cpu='4550m',
                                         memory=f'{memory}Ki',
                                     ),
                                 ),

@@ -48,7 +48,7 @@ class GKECluster(FileProvisionedResource):
                 # Consider changing this for cost-effectiveness
                 machine_type=machine_type,
                 # in GB, minimum is 10
-                disk_size_gb=10,
+                disk_size_gb=60,
                 # TODO: examine the effect of this
                 preemptible=True,
                 # for GCR https://googleapis.github.io/google-cloud-python/latest/container/gapic/v1/types.html#google.cloud.container_v1.types.NodeConfig.oauth_scopes

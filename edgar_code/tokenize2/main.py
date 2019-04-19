@@ -77,4 +77,4 @@ def text2ws_counts(text):
             counter[stem] += 1
             unstem[stem].add(word)
     # counter = {stem: count for stem, count in counter.items() if count > 1}
-    return counter, unstem, sum(map(len, words)), len(words)
+    return counter, unstem, sum(map(len, words))

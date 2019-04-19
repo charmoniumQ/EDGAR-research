@@ -41,3 +41,4 @@ clean_html_text.txt
 stats.text
 
 _build/
+.mypy_cache/

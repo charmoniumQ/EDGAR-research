@@ -1,3 +1,4 @@
+import threading
 import collections
 from pathlib import Path
 import urllib
@@ -7,6 +8,9 @@ import shutil
 import random
 import string
 import abc
+
+
+sem = threading.BoundedSemaphore(value=1)
 
 
 # TODO: allow caching 'named objects'. Cache the name instead of the object.
@@ -53,17 +57,18 @@ class Cache(object):
         self.miss_msg = miss_msg
 
     def __call__(self, *pos_args, **kwargs):
-        args_key = self.obj_store.to_key(pos_args, kwargs)
-        if args_key in self.obj_store:
-            if self.hit_msg:
-                logging.info(f'hit {self.name} with {pos_args}, {kwargs}')
-            res = self.obj_store[args_key]
-        else:
-            if self.miss_msg:
-                logging.info(f'miss {self.name} with {pos_args}, {kwargs}')
-            res = self.function(*pos_args, **kwargs)
-            self.obj_store[args_key] = res
-        return res
+        with sem:
+            args_key = self.obj_store.to_key(pos_args, kwargs)
+            if args_key in self.obj_store:
+                if self.hit_msg:
+                    logging.info(f'hit {self.name} with {pos_args}, {kwargs}')
+                res = self.obj_store[args_key]
+            else:
+                if self.miss_msg:
+                    logging.info(f'miss {self.name} with {pos_args}, {kwargs}')
+                res = self.function(*pos_args, **kwargs)
+                self.obj_store[args_key] = res
+            return res
 
     def clear(self):
         '''Removes all cached items'''
@@ -106,13 +111,9 @@ class FileStore(ObjectStore):
         self.cache_path = pathify(cache_path) / (self.name + '_cache.pickle')
 
         if self.cache_path.exists():
-            if load_msg:
-                logging.info(f'loading cache from {self.cache_path}')
             with self.cache_path.open('rb') as f:
                 self.data = self.serializer.load(f)
         else:
-            if load_msg:
-                logging.info(f'create cache in {self.cache_path}')
             self.cache_path.parent.mkdir(parents=True, exist_ok=True)
             self.data = {}
 
@@ -170,7 +171,10 @@ class DirectoryStore(ObjectStore):
         return path.exists()
 
     def clear(self):
-        shutil.rmtree(self.obj_path)
+        if hasattr(self.obj_path, 'rmtree'):
+            self.obj_path.rmtree
+        else:
+            shutil.rmtree(self.obj_path)
 
 
 def hashable(obj):

@@ -11,4 +11,6 @@ RUN apt-get -y update && apt-get -y install gcc g++ expect libjpeg-dev zlib1g-de
 
 RUN pip3 install google-cloud-storage https://github.com/charmoniumQ/distributed/archive/issue-1819.zip bokeh
 
+RUN pip3 install Pyro4
+
 ADD update_status.py /app/update_status.py

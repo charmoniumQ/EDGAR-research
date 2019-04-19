@@ -23,4 +23,4 @@ def is_text_line(line):
     alpha_line = non_letter.sub('', line).lower()
     # TODO: examine bullet-points in 1-800-FLOWERS
     # TODO: see distribution on len(alpha_line) and linee.count(' ') to tune params
-    return len(alpha_line) > 40 and line.count(' ') > 20
+    return len(alpha_line) > 80 and line.count(' ') > 20

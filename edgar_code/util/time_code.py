@@ -1,3 +1,5 @@
+import logging
+logging.basicConfig(setLevel=logging.INFO)
 import datetime
 import contextlib
 
@@ -6,6 +8,7 @@ import contextlib
 def time_code(msg=None):
     dct = {}
     start = datetime.datetime.now()
+    logging.info(f'started: {msg}')
     try:
         yield dct
     finally:
@@ -13,7 +16,7 @@ def time_code(msg=None):
         time = stop - start
         dct['time'] = time
         if msg:
-            print(f'{time!s}: {msg}')
+            logging.info(f'{time!s}s: {msg}')
 
 
 def add_time(func):

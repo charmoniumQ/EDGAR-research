@@ -2,6 +2,10 @@ import collections
 from urllib.parse import urlparse
 import io
 import sys
+import time
+import datetime
+import logging
+logging.basicConfig(level=logging.INFO)
 if sys.version_info >= (3, 7):
     from dataclasses import dataclass
 else:
@@ -85,26 +89,10 @@ class GSPath(object):
             else:
                 return io.TextIOWrapper(WGSFile(self, flags), encoding=encoding, errors='strict')
         elif 'r' in flags:
-            import time
             if 'b' in flags:
-                for i in range(10):
-                    try:
-                        return io.BytesIO(self.blob.download_as_string())
-                    except Exception as e:
-                        if i == 9:
-                            raise e
-                        else:
-                            time.sleep(6)
-                    
+                return io.BytesIO(download(self))
             else:
-                for i in range(10):
-                    try:
-                        return io.BytesIO(self.blob.download_as_string().decode())
-                    except Exception as e:
-                        if i == 9:
-                            raise e
-                        else:
-                            time.sleep(6)
+                return io.StringIO(download(self).decode(encoding=encoding))
         else:
             raise RuntimeError(f'Flag {flags} not supported')
 
@@ -114,8 +102,20 @@ class WGSFile(io.BytesIO):
         self.gs_path = gs_path
 
     def close(self):
+        start = datetime.datetime.now()
         self.gs_path.blob.upload_from_file(self, rewind=True)
+        end = datetime.datetime.now()
+        dur = (end - start).total_seconds()
+        logging.info(f'upload {self.gs_path}: {dur:.1f}s')
         super().close()
+
+def download(gs_path):
+    start = datetime.datetime.now()
+    contents = gs_path.blob.download_as_string()
+    end = datetime.datetime.now()
+    dur = (end - start).total_seconds()
+    logging.info(f'download {gs_path}: {dur:.1f}s')
+    return contents
 
 
 from pathlib import Path
