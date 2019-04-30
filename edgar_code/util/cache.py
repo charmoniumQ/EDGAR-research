@@ -10,9 +10,6 @@ import string
 import abc
 
 
-sem = threading.BoundedSemaphore(value=1)
-
-
 # TODO: allow caching 'named objects'. Cache the name instead of the object.
 # TODO: allow caching objects by provenance. Cache the thing you did to make the object instead of the object.
 # https://github.com/bmabey/provenance
@@ -55,9 +52,11 @@ class Cache(object):
         self.obj_store = obj_store(self.name)
         self.hit_msg = hit_msg
         self.miss_msg = miss_msg
+        self.sem = threading.RLock()
+        self.__qualname__ = f'Cache({self.name})'
 
     def __call__(self, *pos_args, **kwargs):
-        with sem:
+        with self.sem:
             args_key = self.obj_store.to_key(pos_args, kwargs)
             if args_key in self.obj_store:
                 if self.hit_msg:

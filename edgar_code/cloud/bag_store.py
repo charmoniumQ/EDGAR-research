@@ -1,3 +1,4 @@
+import os
 import dask
 import urllib.parse
 import edgar_code.util.cache as cache

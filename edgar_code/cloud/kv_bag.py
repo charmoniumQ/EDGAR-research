@@ -28,8 +28,8 @@ class KVBag(dask.bag.Bag):
     #     def tupler(*args):
     #         return args
     #     self.dask.dicts[self.name] = {
-    #         key: (tupler, val key[1],)
-    #         for key, val in self.dask.dicts[self.name].items()
+    #         key: (tupler, i, val)
+    #         for i, (key, val) in enumerate(self.dask.dicts[self.name].items())
     #     }
     #     return result
 
@@ -75,6 +75,39 @@ class KVBag(dask.bag.Bag):
     @classmethod
     def from_bag(Class, bag):
         return Class(bag.dask, bag.name, bag.npartitions)
+
+    @classmethod
+    def concat(Class, bags):
+        bag = dask.bag.concat(bags)
+        return Class(bag.dask, bag.name, bag.npartitions)
+
+import dask.bag
+import dask.highlevelgraph
+def map_const(func, bag, delayed):
+    name = f'map_const({func}, {bag.name}, {delayed.key})'
+    def map_chunk(partition, const):
+        return [func(item, const) for item in partition]
+
+    dsk = {
+        (name, n): (map_chunk, (bag.name, n), delayed.key)
+        for n in range(bag.npartitions)
+    }
+
+    graph = dask.highlevelgraph.HighLevelGraph.from_collections(name, dsk, dependencies=[bag, delayed])
+
+    return type(bag)(graph, name, bag.npartitions)
+
+# test
+# runs = []
+# def side_effect_func(a):
+#     runs.append(a)
+#     return a + a
+
+# n = 30
+# bag = dask.bag.range(n, npartitions=10)
+# delayed = dask.delayed(side_effect_func)('foo')
+# lst = map_const(lambda a, b: f'{a} {b}', bag, delayed).compute()
+# print(lst == [f'{i} foofoo' for i in range(n)])
 
 # Cache intermediate steps
 # Cascading updates

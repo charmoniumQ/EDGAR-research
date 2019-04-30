@@ -70,8 +70,8 @@ def directors_for(year, qtr):
         .map_values(form_items_to_directors)
 
 # no cache because not much work to compute
-def good_rfs_for(form_type, year, qtr):
-    return rfs_for(form_type, year, qtr).filter_values(bool)
+def good_rfs_for(year, qtr):
+    return rfs_for(year, qtr).filter_values(bool)
 
 
 def index_to_rf(index):

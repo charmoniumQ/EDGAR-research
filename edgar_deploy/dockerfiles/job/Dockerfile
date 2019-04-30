@@ -17,6 +17,9 @@ RUN pip3 install scipy sklearn matplotlib Pyro4
 RUN pip3 install tqdm memory_profiler
 RUN python3 -c "import nltk; nltk.download('stopwords'); nltk.download('punkt')"
 RUN pip3 install https://github.com/charmoniumQ/gensim/archive/develop2.zip
+RUN pip3 install tqdm
+RUN apt-get install -y unzip
+# TODO: compactify these
 
 ADD wait_for_scheduler.py /work/wait_for_scheduler.py
 ADD runner.py /work/runner.py

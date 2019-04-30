@@ -65,3 +65,19 @@ def generator2iterator(generator, length=None):
             else:
                 raise RuntimeError('len not known yet')
     return Iterator()
+
+
+# import traceback
+# import signal
+# import sys
+# import os
+# import time
+# import random
+# def handle_signal(signal, frame):
+#     for thread, frame in sys._current_frames().items():
+#         # random sleeps helps prevent stacktraces from different threads being interleaved
+#         time.sleep(random.random() * 0.1)
+#         # this prints the entire stacktrace without intermediate buffering
+#         print(''.join(traceback.format_stack(frame)) + '\n')
+# signal.signal(signal.SIGUSR1, handle_signal)
+# print(f'For stacktrace: kill -s SIGUSR1 {os.getpid()}', file=sys.stderr)

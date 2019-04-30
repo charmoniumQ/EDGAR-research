@@ -17,9 +17,10 @@ import kubernetes
 
 
 class GKECluster(FileProvisionedResource):
-    def __init__(self, nodecount=1, cache_dir=None, name=None, machine_type='n1-standard-1'):
+    def __init__(self, nodecount=1, cache_dir=None, name=None, machine_type='n1-standard-1', disk_size=10):
         self.nodecount = nodecount
         self.name = name
+        self.disk_size = max(disk_size, 10)
         self.name_path = f'projects/{config.gcloud.project}/locations/{config.gcloud.fq_zone}/clusters/{self.name}'
         self.cluster_manager = google.cloud.container_v1.ClusterManagerClient()
         self.provision_cluster(machine_type)
@@ -48,7 +49,7 @@ class GKECluster(FileProvisionedResource):
                 # Consider changing this for cost-effectiveness
                 machine_type=machine_type,
                 # in GB, minimum is 10
-                disk_size_gb=60,
+                disk_size_gb=self.disk_size,
                 # TODO: examine the effect of this
                 preemptible=True,
                 # for GCR https://googleapis.github.io/google-cloud-python/latest/container/gapic/v1/types.html#google.cloud.container_v1.types.NodeConfig.oauth_scopes

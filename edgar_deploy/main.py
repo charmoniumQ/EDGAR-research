@@ -23,10 +23,13 @@ from . import utils
 # worker_count = 12
 # machine_type = f'n1-ultramem-40'
 
-cores_per_node = 8
-node_count = 8
-worker_count = 16
+cores_per_node = 2
+node_count = 12
+worker_count = 12
+disk_size = int(8 + 1.5 * (worker_count / node_count))
 machine_type = f'n1-highmem-{cores_per_node}'
+run_module = 'edgar_code.executables.tokenize_rfs'
+# run_module = 'edgar_code.executables.search_rfs'
 
 cluster_name = f'{config.name}-1'
 namespace = f'{config.name}-{utils.rand_name(5, lowercase=True)}'
@@ -51,6 +54,7 @@ with s3bucket:
         machine_type=machine_type,
         cache_dir=config.cache_dir,
         name=cluster_name,
+        disk_size=disk_size,
         should_save=True,
     )
 
@@ -62,6 +66,7 @@ with s3bucket:
                 worker_count,
                 images,
                 s3bucket.name,
+                run_module,
             )
             print('done ish')
             input()

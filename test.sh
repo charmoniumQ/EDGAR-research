@@ -8,7 +8,7 @@ done
 
 ns=$(kubectl get namespaces -o 'jsonpath={.items[*].metadata.name}' --field-selector 'status.phase==Active' | egrep 'edgar-[a-z]*' -o)
 
-while ! job_pod=$(kubectl -n ${ns} get -o 'jsonpath={.items[0].metadata.name}' pods -l job-name=job)
+while ! job_pod=$(kubectl -n ${ns} get -o 'jsonpath={.items[0].metadata.name}' pods -l job-name=job 2> /dev/null)
 do
     echo Waiting for job pod
     sleep 5
@@ -30,6 +30,8 @@ port_forward_pid=$!
 
 echo logging
 
+worker0_pod=$(kubectl -n $ns get -o json pods -l deployment=worker | jq -r '.items[0].metadata.name')
+# tmux new-window -a "kubectl -n ${ns} logs -f ${worker0_pod}"
 kubectl -n ${ns} logs -f ${job_pod}
-notify 'remote job done'
+kubectl -n ${ns} logs -f ${job_pod} | tail -n 5 | notify
 kill $!

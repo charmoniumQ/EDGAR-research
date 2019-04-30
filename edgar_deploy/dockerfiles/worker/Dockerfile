@@ -25,3 +25,7 @@ RUN pip3 install dask[bag] google-cloud-storage requests toolz cloudpickle nltk 
 RUN pip3 install scipy sklearn matplotlib Pyro4
 RUN python3 -c "import nltk; nltk.download('stopwords'); nltk.download('punkt')"
 RUN pip3 install https://github.com/charmoniumQ/gensim/archive/develop2.zip
+RUN apt-get install -y unzip
+RUN pip3 install --upgrade --no-deps --force-reinstall https://github.com/charmoniumQ/distributed/archive/v0.0.2.zip
+RUN pip3 install tqdm
+RUN pip3 install memory-profiler

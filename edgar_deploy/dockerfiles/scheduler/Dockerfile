@@ -13,4 +13,6 @@ RUN pip3 install google-cloud-storage https://github.com/charmoniumQ/distributed
 
 RUN pip3 install Pyro4
 
+RUN pip3 install --upgrade --no-deps --force-reinstall https://github.com/charmoniumQ/distributed/archive/v0.0.2.zip
+
 ADD update_status.py /app/update_status.py

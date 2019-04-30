@@ -23,7 +23,8 @@ blob = bucket.blob(remote_egg_path)
 blob.download_to_filename(local_egg_path)
 dask_client.upload_file(local_egg_path)
 
-
+# os.system(f'unzip {local_egg_path}')
+# sys.path.insert(0, os.getcwd())
 sys.path.insert(0, local_egg_path)
 
 

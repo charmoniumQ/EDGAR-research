@@ -17,8 +17,6 @@ import google.cloud.storage
 # TODO: config
 # GOOGLE_APPLICATION_CREDENTIALS=edgar_deploy/main-722.service_account.json python3 -m edgar_code.executables.get_all_rfs
 
-client = google.cloud.storage.Client()
-
 
 @dataclass()
 class GSPath(object):
@@ -40,7 +38,8 @@ class GSPath(object):
     def __init__(self, bucket, path):
         self.path = Path(path)
         if isinstance(bucket, str):
-            bucket = client.bucket(bucket)
+            # TODO: use a weakref factory for this
+            bucket = google.cloud.storage.Client().bucket(bucket)
         self.bucket = bucket
         self.blob = self.bucket.blob(str(self.path))
 
@@ -49,7 +48,7 @@ class GSPath(object):
 
     def __setstate__(self, data):
         self.path = data['path']
-        self.bucket = client.bucket(data['bucket'])
+        self.bucket = google.cloud.storage.Client().bucket(data['bucket'])
         self.blob = self.bucket.blob(str(self.path))
 
     def __truediv__(self, other):
@@ -102,20 +101,11 @@ class WGSFile(io.BytesIO):
         self.gs_path = gs_path
 
     def close(self):
-        start = datetime.datetime.now()
         self.gs_path.blob.upload_from_file(self, rewind=True)
-        end = datetime.datetime.now()
-        dur = (end - start).total_seconds()
-        logging.info(f'upload {self.gs_path}: {dur:.1f}s')
         super().close()
 
 def download(gs_path):
-    start = datetime.datetime.now()
-    contents = gs_path.blob.download_as_string()
-    end = datetime.datetime.now()
-    dur = (end - start).total_seconds()
-    logging.info(f'download {gs_path}: {dur:.1f}s')
-    return contents
+    return gs_path.blob.download_as_string()
 
 
 from pathlib import Path

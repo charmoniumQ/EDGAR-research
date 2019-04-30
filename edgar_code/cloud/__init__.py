@@ -1,4 +1,4 @@
-from .kv_bag import KVBag
+from .kv_bag import KVBag, map_const
 from .storage import GSPath, copy
 from .bag_store import BagStore
 

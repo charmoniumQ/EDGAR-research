@@ -30,7 +30,7 @@ def kubernetes_namespace(kube_api, namespace):
 
 
 @utils.time_code_decor(print_start=False)
-def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_bucket):
+def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_bucket, run_module):
     ports = {
         'scheduler': 8786,
         'dashboard': 8787,
@@ -81,7 +81,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
             'n_workers': str(n_workers),
             'dask_scheduler_address': f'tcp://scheduler:{ports["scheduler"]}',
             'run_name': config.run_name,
-            'run_module': 'edgar_code.executables.tokenize_rfs',
+            'run_module': run_module,
             'namespace': namespace,
             'PYRO_SERIALIZERS_ACCEPTED': 'pickle',
             'PYRO_SERIALIZER': 'pickle',
@@ -92,8 +92,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
         }.items()
     ]
 
-    memory = int(1e7)
-    # memory = int(0.3e6)
+    memory = int(1e6) # in KiB
 
     kube_v1beta.create_namespaced_deployment(
         namespace,
@@ -127,7 +126,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                                 command=[
                                     '/bin/sh', '-c',
                                     # f'python3 -m Pyro4.naming --host=0.0.0.0 --port=${{pyro_ns_port}} & ' +
-                                    f'unbuffer dask-scheduler --port {ports["scheduler"]} | unbuffer -p /app/update_status.py',
+                                    f'unbuffer dask-scheduler --debug --port {ports["scheduler"]} | unbuffer -p /app/update_status.py',
                                 ],
                                 volume_mounts=[secret_volume_mount],
                                 env=env_vars,
@@ -183,7 +182,8 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                                 command=[
                                     '/bin/sh', '-c',
                                     # f'(sleep 60 ; python3 -m gensim.models.lsi_worker --host ${{pyro_ns_host}} --port ${{pyro_ns_port}}) & ' +
-                                    f'dask-worker ${{dask_scheduler_address}} --memory-limit {int(memory * 1024 * 0.5)}',
+                                    f'dask-worker ${{dask_scheduler_address}}',
+                                    # --memory-limit {int(memory * 1024 * 0.95)}
                                     # TODO: nprocs
                                     # TODO: nthreads
                                 ],
@@ -191,7 +191,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                                 env=env_vars,
                                 resources=kubernetes.client.V1ResourceRequirements(
                                     requests=dict(
-                                        cpu='350m',
+                                        cpu='450m',
                                         memory=f'{memory}Ki',
                                     ),
                                 ),
