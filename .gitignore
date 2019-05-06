@@ -42,3 +42,5 @@ stats.text
 
 _build/
 .mypy_cache/
+.coverage
+prof/

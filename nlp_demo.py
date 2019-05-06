@@ -44,7 +44,7 @@ def text2paragraphs(text):
     return list(filter(is_paragraph, text.split('\n')))
 
 if __name__ == '__main__':
-    input_path = Path('corpus.txt')
+    input_path = Path('../corpus.txt')
 
     # if not input_path.exists():
     #     import requests
