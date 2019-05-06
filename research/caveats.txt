@@ -1,0 +1,41 @@
+80% of 10-Ks parsed
+Paragraph could be split incorrectly
+Uncommon words, common words, stop words, and short words are filtered out
+LSI vs LDA
+Companies might write about as many risks as they can instead of genuinely reflecting on the risks. They would rather have a risk that doesn't matter (Type I Error) than not have a risk that matters (Type II Error).
+(c) Smauel Grayson 2019
+All rights reserved.
+If you would like to use these data, please let me know. I am happy to let you use the data, but I would want to fix some of the caveats before this gets distributed widely.
+
+topic 336
+Nuclear power-plant related terms
+Starts increasing in 2009, peaks in 2016
+Kind of aligns with Fukushima disaster, but not strongly. I can't explain the rest.
+
+topic 007
+Generic natural disasters
+Interesting curve that I can't explain.
+
+topic 020
+Insurance for natural disasters
+Decrease in 2017
+I don't know why
+
+topic 000
+Generic financial-related risks that every firm has.
+Increase in 2007.
+Perhaps because of 2007 financial crisis.
+
+topic 039
+Oil well drilling and exploration
+Peak in 2008
+I don't know why
+
+topic 041
+Oil well drilling, focusing on ownership
+Increase in 2007
+I don't know why
+
+topic 032
+Emissions produced by power generation
+Not stressed during 2007 crisis, but steadily increasing in stress

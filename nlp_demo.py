@@ -10,6 +10,7 @@ import numpy as np
 print_phrases = False
 print_semantic_terms = False
 print_n_grams = True
+print_significant_bigrams = True
 
 def concat_lists(lists):
     ret = []
@@ -54,8 +55,9 @@ if __name__ == '__main__':
     with input_path.open('r') as f:
         text = f.read()
 
-    paragraphs = list(map(nlp, text2paragraphs(text)))
-    paragraphs = paragraphs[:10]
+    clean_text = text.replace('“', '"')
+    paragraphs = list(map(nlp, text2paragraphs(clean_text)))
+    paragraphs = paragraphs
     paragraphs_entities = [
         [
             tuple([
@@ -73,9 +75,9 @@ if __name__ == '__main__':
     if print_phrases:
         print(
             '\n'.join(
-                ' '.join(
-                    '-'.join(
-                        token.orth_ for token in phrase
+                '|'.join(
+                    ' '.join(
+                        f'{token.orth_}/{token.tag_}' for token in phrase
                     )
                     for phrase in paragraph_phrases
                 )
@@ -89,7 +91,7 @@ if __name__ == '__main__':
             [
                 (token.lemma_, token.orth_, token.tag_)
                 for token in phrase
-                if token.tag_ in semantic_tags and not token.is_stop
+                if token.tag_ in semantic_tags and not token.is_stop and token.is_alpha
             ]
             for phrase in paragraph_phrases
         ]
@@ -115,7 +117,7 @@ if __name__ == '__main__':
                 stem2words[stem][word] += 1
     def stem2word(stem):
         return stem2words[stem].most_common(1)[0][0]
-    max_n = 2
+    max_n = 3
     paragraphs_ns_counts = [
         merge_dicts([
             {
@@ -140,7 +142,7 @@ if __name__ == '__main__':
             paragraph_ns_counts[n]
             for paragraph_ns_counts in paragraphs_ns_counts
         ], collections.Counter())
-        for n in range(1, max_n + 1)
+        for n in range(max_n + 1)
     }
 
     if print_n_grams:
@@ -155,3 +157,21 @@ if __name__ == '__main__':
                 for n, ns_counts in ns_counts.items()
             )
         )
+
+    from nltk.metrics.association import BigramAssocMeasures
+    def score_bigrams(ns_counts):
+        for bigram, count in ns_counts[2].most_common():
+            score = BigramAssocMeasures.likelihood_ratio(
+                ns_counts[2][(bigram[0], bigram[1])],
+                (
+                    ns_counts[1][(bigram[0],)],
+                    ns_counts[1][(bigram[1],)],
+                ),
+                ns_counts[0][()],
+            )
+            yield bigram, score
+
+    if print_significant_bigrams:
+        for bigram, score in sorted(score_bigrams(ns_counts), key=lambda pair: -pair[1]):
+            if score > 35:
+                print([stem2word(stem) for stem in bigram], score)
