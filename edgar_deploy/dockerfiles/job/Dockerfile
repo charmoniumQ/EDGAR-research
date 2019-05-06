@@ -20,6 +20,8 @@ RUN pip3 install https://github.com/charmoniumQ/gensim/archive/develop2.zip
 RUN pip3 install tqdm
 RUN apt-get install -y unzip
 # TODO: compactify these
+RUN pip3 install spacy
+RUN python3 -m spacy download en_core_web_lg
 
 ADD wait_for_scheduler.py /work/wait_for_scheduler.py
 ADD runner.py /work/runner.py

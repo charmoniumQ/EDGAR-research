@@ -29,3 +29,5 @@ RUN apt-get install -y unzip
 RUN pip3 install --upgrade --no-deps --force-reinstall https://github.com/charmoniumQ/distributed/archive/v0.0.2.zip
 RUN pip3 install tqdm
 RUN pip3 install memory-profiler
+RUN pip3 install spacy
+RUN python3 -m spacy download en_core_web_lg
