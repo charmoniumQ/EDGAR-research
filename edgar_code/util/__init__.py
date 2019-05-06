@@ -4,6 +4,7 @@ from .fs_util import (
     new_directory,
 )
 from . import cache
+from .cache import Cache
 
 
 def download_retry(url, max_retries=10, cooldown=5):
@@ -66,6 +67,17 @@ def generator2iterator(generator, length=None):
                 raise RuntimeError('len not known yet')
     return Iterator()
 
+def concat_lists(lists):
+    ret = []
+    for list_ in lists:
+        ret.extend(list_)
+    return ret
+
+def merge_dicts(dicts):
+    ret = {}
+    for dict_ in dicts:
+        ret.update(dict_)
+    return ret
 
 # import traceback
 # import signal

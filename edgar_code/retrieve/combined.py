@@ -1,10 +1,13 @@
-import toolz
-from ..cloud import cache_path, BagStore, KVBag
-from ..util.cache import Cache
-from .index import download_indexes
-from .form import index_to_form_text, form_text_to_main_text, main_text_to_form_items
-from .rf import form_items_to_rf
-from .directors import form_items_to_directors
+import functools
+from typing import Union
+import dask.bag
+from edgar_code.cloud import cache_path, BagStore
+from edgar_code.util import Cache
+from edgar_code.type_stubs.dask.bag import Bag as BagType
+from edgar_code.retrieve.form import (
+    index2form_text, form_text2main_text, main_text2form_items,
+    form_items2form_item, download_indexes, Index
+)
 
 
 # TODO: allow the caller to set the cache path and S3 credentials, instead of
@@ -14,84 +17,47 @@ from .directors import form_items_to_directors
 # path and S3 credentials.
 
 
+
 cache_decor = Cache.decor(BagStore.create(cache_path / 'bags'), miss_msg=True)
 #cache_decor = lambda x: x
 
 
+# TODO: function signature for higher order function
+def make_try_func(func):
+    @functools.wraps(func)
+    def try_func(*args, **kwargs):
+        if isinstance(args[0], Exception):
+            return args[0]
+        else:
+            try:
+                return func(*args, **kwargs)
+            except Exception as exc: #pylint: disable=broad-except
+                return exc
+    return try_func
+
+
+npartitions = 100
 @cache_decor
-def indexes_for(form_type, year, qtr):
-    return KVBag.from_bag(
-        download_indexes(form_type, year, qtr)
-        .map(lambda index_row: (index_row, index_row))
-    )
+def get_indexes(form_type: str, year: int, qtr: int) -> BagType[Index]:
+    return dask.bag.from_sequence(
+        download_indexes(form_type, year, qtr),
+        npartitions=npartitions)
 
 
-def form_texts_for(form_type, year, qtr):
-    return (
-        indexes_for(form_type, year, qtr)
-        .map_values(index_to_form_text(form_type))
-    )
-
-
+# TODO: Result[T] = Union[T, Exception]
 @cache_decor
-def main_texts_for(form_type, year, qtr):
+def get_main_texts(form_type: str, year: int, qtr: int) -> BagType[Union[str, Exception]]:
     return (
-        form_texts_for(form_type, year, qtr)
-        .map_values(form_text_to_main_text(form_type))
-    )
-
-
-def form_itemss_for(form_type, year, qtr):
-    '''
-    :return: bag of dictionaries where each dict has a form-heading as its key, and the text of that form-heading as its value.
-    For example:
-    {'Item 1A': 'This is the section 1a text here.', 'Item 2': 'This is the section 2 text'}
-    '''
-    return (
-        main_texts_for(form_type, year, qtr)
-        .map_values(main_text_to_form_items(form_type))
+        get_indexes(form_type, year, qtr)
+        .map(make_try_func(functools.partial(index2form_text)(form_type)))
+        .map(make_try_func(functools.partial(form_text2main_text)(form_type)))
     )
 
 
 @cache_decor
-def rfs_for(year, qtr):
+def get_rfs(year: int, qtr: int) -> BagType[Union[str, Exception]]:
     return (
-        form_itemss_for('10-K', year, qtr)
-        .map_values(form_items_to_rf)
-    )
-
-
-def directors_for(year, qtr):
-    """
-    Departure of Directors (item 5.02, form 8k)
-    :return:
-    """
-    return form_itemss_for('8-k', year, qtr) \
-        .map_values(form_items_to_directors)
-
-# no cache because not much work to compute
-def good_rfs_for(year, qtr):
-    return rfs_for(year, qtr).filter_values(bool)
-
-
-def index_to_rf(index):
-    '''Not cached. Useful for getting a few indexes to rfs, rather than the
-whole quarter. If you want the whole quarter, use rfs_for because it's
-cached.'''
-    return toolz.pipe(
-        index,
-        index_to_form_text('10-K'),
-        form_text_to_main_text('10-K'),
-        main_text_to_form_items('10-K'),
-        form_items_to_rf,
-    )
-
-
-def index_to_directors(index):
-    return toolz.pipe(
-        index,
-        index_to_form_text('8-K'),
-        form_text_to_main_text('8-K'),
-        main_text_to_form_items('8-K'),
-        form_items_to_directors
+        get_main_texts('10-K', year, qtr)
+        .map(make_try_func(functools.partial(main_text2form_items)('10-K')))
+        .map(make_try_func(functools.partial(form_items2form_item)('Item 1A')))
     )

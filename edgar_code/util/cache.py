@@ -17,6 +17,15 @@ import abc
 # TODO: make the obj_stores (list of obj_store factories) more intuitive, easier for developers to write
 
 
+def make_lazy_callable(make_callable):
+    callablef = None
+    def lazy_f(*args, **kwargs):
+        if callablef is None:
+            callabelf = make_callable()
+        return callabelf(*args, **kwargs)
+    return lazy_f
+
+
 class Cache(object):
     @classmethod
     def decor(Class, obj_store, hit_msg=False, miss_msg=False, suffix=''):
