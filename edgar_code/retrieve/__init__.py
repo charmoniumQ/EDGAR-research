@@ -1,1 +1,1 @@
-from .combined import get_rfs, get_indexes
+from edgar_code.combined import get_rfs, get_indexes
