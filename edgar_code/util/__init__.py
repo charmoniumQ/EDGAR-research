@@ -3,8 +3,6 @@ from .fs_util import (
     sanitize_unused_fname,
     new_directory,
 )
-from . import cache
-from .cache import Cache
 
 
 def download_retry(url, max_retries=10, cooldown=5):

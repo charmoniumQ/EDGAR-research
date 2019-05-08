@@ -1,4 +1,4 @@
-from typing import List, Dict, Union, Tuple, NamedTuple, Iterable, Iterator
+from typing import List, Dict, NamedTuple, Iterable, Iterator
 import html as pyhtml
 import io
 import datetime
@@ -330,6 +330,8 @@ def remove_header(paragraphs: List[str]) -> List[str]:
         return paragraphs[partis[0]:]
     elif len(partis) == 2:
         return paragraphs[partis[1]:]
+    else:
+        raise ParseError('Found too many "Part I"s to remove')
 
 
 def paragraphs2rf(

@@ -1,0 +1,3 @@
+from typing import Dict
+
+def detect(rawdata: bytes) -> Dict[str, str]: ...

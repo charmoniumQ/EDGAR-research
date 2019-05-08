@@ -6,7 +6,7 @@ import edgar_code.parse as parse
 # fields can be dilimited by spaces or pipes
 # see https://www.sec.gov/Archives/edgar/full-index/2016/QTR1/master.idx
 
-def test_parse_index1():
+def test_parse_index1() -> None:
     #pylint: disable=line-too-long
     raw_indexes = [
         (1995, 1, b'''Description:           Master Index of EDGAR Dissemination Feed by Form Type
@@ -84,7 +84,7 @@ CIK|Company Name|Form Type|Date Filed|Filename
         assert indexes[:2] == parsed_index
 
 
-def test_parse_sgml():
+def test_parse_sgml() -> None:
     raw_sgml1 = b'''<SEC-DOCUMENT>0001209191-16-107917.txt : 20160311
 <SEC-HEADER>0001209191-16-107917.hdr.sgml : 20160311
 <ACCEPTANCE-DATETIME>20160311172333
@@ -153,7 +153,7 @@ This is a paragraph.
         assert paragraph.strip() == expected_paragraphs
 
 
-def test_parse_text():
+def test_parse_text() -> None:
     text1 = b'''
 <PAGE>
 
@@ -199,7 +199,7 @@ referred to herein as the "Company".
         assert paragraph.startswith(expected_paragraph_start)
 
 
-def test_text2paragraphs():
+def test_text2paragraphs() -> None:
     #pylint: disable=line-too-long
     paragraphs = [
         '               UNITED STATES SECURITIES AND EXCHANGE COMMISSION                            Washington, D.C. 20549',
@@ -233,7 +233,7 @@ def test_text2paragraphs():
         assert paragraph == expected_paragraph
 
 
-def test_remove_header():
+def test_remove_header() -> None:
     test_cases = [
         (2, [
             'Part I',
@@ -252,7 +252,7 @@ def test_remove_header():
         assert parse.remove_header(paragraphs) == paragraphs[-n:]
 
 
-def test_paragraphs2rf():
+def test_paragraphs2rf() -> None:
     #pylint: disable=line-too-long
     test_cases_pre_2006 = [
         # pre 2006

@@ -1,3 +1,4 @@
+typing_extensions
 dask[bag]
 google-cloud-storage
 requests
