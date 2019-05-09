@@ -62,8 +62,12 @@ confidence=
 # --disable=W".
 disable=
     missing-docstring,
+    # my personal style is to explicitly else-return and else-raise.
+    # that way, if you change the return or raise, same functionality
     no-else-raise,
-    no-else-return
+    no-else-return,
+    # mypy types require that I subscript object e.g. List[T]
+    unsubscriptable-object
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

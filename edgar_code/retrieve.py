@@ -1,5 +1,5 @@
 import functools
-from typing import Union, Callable, Any, Generic, TypeVar, List, cast
+from typing import Union, Callable, TypeVar, List
 import dask.bag
 from edgar_code.cloud import cache_path, BagStore
 from edgar_code.cache import Cache
@@ -87,4 +87,4 @@ def get_rfs(year: int, qtr: int) -> Bag[Union[List[str], Exception]]:
     )
 
 
-__all__ = ['get_rfs']
+__all__ = ['get_rfs', 'get_indexes']

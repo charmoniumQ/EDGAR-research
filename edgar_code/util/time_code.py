@@ -57,7 +57,7 @@ much as general profiling.
         start = datetime.datetime.now()
         try:
             yield
-        except Exception as exc2:
+        except Exception as exc2: # pylint: disable=broad-except
             exc = exc2
         finally:
             stop = datetime.datetime.now()
@@ -65,8 +65,12 @@ much as general profiling.
             self.stats[tuple(self.stack)].append(duration)
             self.stack.pop()
             if print_time:
-                logging.info('%s: %.1fs' + (' (err)' if exc is not None else ''),
-                             qualified_name_str, duration)
+                logging.info(
+                    '%s: %.1fs %s',
+                    qualified_name_str,
+                    duration,
+                    ' (err)' if exc is not None else ''
+                )
         if exc:
             raise exc
 

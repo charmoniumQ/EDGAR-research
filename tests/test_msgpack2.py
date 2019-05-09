@@ -19,7 +19,7 @@ def test_msgpack2() -> None:
         Index(
             company_name='Google',
             form_type='10-K',
-            CIK=120000000,
+            cik=120000000,
             date_filed=datetime.date(1995, 1, 1), year=1995, qtr=1,
             url='https://url/',
         ),
@@ -27,7 +27,7 @@ def test_msgpack2() -> None:
         (datetime.date.today(), dict(a=3, b=5), [3, Index(
             company_name='Google',
             form_type='10-K',
-            CIK=120000000,
+            cik=120000000,
             date_filed=datetime.date(1995, 1, 1), year=1995, qtr=1,
             url='https://url/',
         )]),

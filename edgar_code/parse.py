@@ -11,7 +11,7 @@ from edgar_code.util import download_retry
 class Index(NamedTuple):
     form_type: str
     company_name: str
-    CIK: int
+    cik: int
     date_filed: datetime.date
     url: str
     year: int
@@ -77,7 +77,7 @@ def parse_body(
             qtr=qtr,
             form_type=line_dict['Form Type'],
             company_name=line_dict['Company Name'],
-            CIK=int(line_dict['CIK']),
+            cik=int(line_dict['CIK']),
             date_filed=datetime.datetime.strptime(
                 line_dict['Date Filed'], '%Y-%m-%d'
             ).date(),
@@ -120,12 +120,12 @@ def split(line_bytes: bytes) -> List[str]:
     while len(elems) > 5:
         elems[1] += ' ' + elems[2]
         del elems[2]
-        raise ValueError()
+        raise ParseError('too many elements')
 
     # too few elements, empty field present
     if len(elems) < 5:
         elems.insert(1, '')
-        raise ValueError()
+        raise ParseError('too few elements')
 
     return elems
 
@@ -137,13 +137,13 @@ def download_indexes(form_type: str, year: int, qtr: int) -> Iterable[Index]:
     for index in filter_form_type(indexes, form_type):
         assert index.form_type == form_type
         assert len(index.company_name) > 4
-        assert index.CIK > 1000
+        assert index.cik > 1000
         assert (
             datetime.date(year, 1, 1) + datetime.timedelta(days=(qtr-1) * 3 * 31)
             < index.date_filed <
             datetime.date(year, 1, 1) + datetime.timedelta(days=(qtr-0) * 3 * 31)
         )
-        assert str(index.CIK) in index.url
+        assert str(index.cik) in index.url
         assert index.year == year
         assert index.qtr == qtr
         yield index
@@ -339,8 +339,16 @@ def paragraphs2rf(
         pre_2006: bool,
 ) -> List[str]:
     if pre_2006:
-        start_pattern = re.compile('item 7.? ?(management\'s discussion and analysis of financial condition and results of operations)$', re.IGNORECASE)
-        stop_pattern = re.compile('item 8.? ?(financial statements and supplementary data)?$', re.IGNORECASE)
+        start_pattern = re.compile(
+            'item 7.? ?(management\'s discussion and '
+            'analysis of financial condition and results of operations)$',
+            re.IGNORECASE
+        )
+        stop_pattern = re.compile(
+            'item 8.? ?(financial statements and '
+            'supplementary data)?$',
+            re.IGNORECASE
+        )
     else:
         start_pattern = re.compile('^item 1a.? ?(risk factors.*)?$', re.IGNORECASE)
         stop_pattern = re.compile('^item 2.? ?(properties.*)?$', re.IGNORECASE)
@@ -353,9 +361,9 @@ def paragraphs2rf(
         if stop_pattern.match(paragraph)
     ]
     if len(start) != 1:
-        raise ParseError()
+        raise ParseError(f'got {len(start)} starts')
     if len(stop) != 1:
-        raise ParseError()
+        raise ParseError(f'got {len(stop)} stops')
     else:
         return paragraphs[start[0]+1:stop[0]]
 
