@@ -1,6 +1,7 @@
 # TODO: investigate the performance implications fo pypy as opposed to miniconda, cpython, or alpine-pypy
 FROM pypy:3.6-slim
 RUN ln -s /usr/local/bin/pypy3 /usr/local/bin/python3
+#FROM python:3.7-slim
 
 ENV TINI_VERSION v0.18.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini

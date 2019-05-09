@@ -17,3 +17,4 @@ Pyro4 # needed to deserialize the gensim data
 spacy
 en_core_web_sm
 chardet
+pytables

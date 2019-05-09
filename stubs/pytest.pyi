@@ -1,5 +1,5 @@
-from typing import ContextManager
+from typing import ContextManager, Type
 
 
-def raises(exc: Exception) -> ContextManager[None]:
+def raises(exc: Type[Exception]) -> ContextManager[None]:
     ...

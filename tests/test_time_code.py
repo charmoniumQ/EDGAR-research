@@ -6,10 +6,10 @@ import pytest
 from edgar_code.util import time_code
 
 
-stats: Dict[Tuple[str], List[float]] = collections.defaultdict(list)
+stats: Dict[Tuple[str, ...], List[float]] = collections.defaultdict(list)
 
 @time_code.decor()
-def f1():
+def f1() -> None:
     stats[('f1',)].append(0)
 
     # includes the time of callees
@@ -27,7 +27,7 @@ def f1():
     raise ValueError()
 
 @time_code.decor()
-def f2():
+def f2() -> None:
     stats[('f1', 'f2')].append(0)
 
     # context manager works just as well as function decorator
@@ -43,7 +43,7 @@ def f2():
     stats[('f1', 'f2')][-1] += 0.07
 
 
-def test_time_code():
+def test_time_code() -> None:
     with pytest.raises(ValueError):
         # if exception occurs, it is propogated up
         f1()
@@ -52,4 +52,4 @@ def test_time_code():
     stats = dict(stats)
     for key in time_code.get_stats().keys() | stats.keys():
         for expected_val, actual_val in zip(stats[key], time_code.get_stats()[key]):
-            assert math.fabs(expected_val - actual_val) < 0.05, (stats, time_code.get_stats())
+            assert math.fabs(expected_val - actual_val) < 0.01, (stats, time_code.get_stats())

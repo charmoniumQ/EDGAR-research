@@ -13,21 +13,21 @@ def download_retry(url, max_retries=10, cooldown=5):
     for retry in range(max_retries):
         try:
             return urllib.request.urlopen(url).read()
-        except Exception as e:
+        except Exception as exc: # pylint: disable=broad-except
             if retry == max_retries - 1:
-                raise e
+                raise exc
             else:
                 time.sleep(cooldown)
 
 
-class Struct(object):
+class Struct: # pylint: disable=too-few-public-methods
     pass
 
 
-def generator_to_list(f):
-    def f_(*args, **kwargs):
-        return list(f(*args, **kwargs))
-    return f_
+def generator_to_list(generator):
+    def func(*args, **kwargs):
+        return list(generator(*args, **kwargs))
+    return func
 
 
 def invert(dct):
@@ -49,7 +49,7 @@ def invert(dct):
 
 
 def generator2iterator(generator, length=None):
-    class Iterator(object):
+    class Iterator:
         def __init__(self):
             self.length = length
         def __iter__(self):
@@ -57,9 +57,9 @@ def generator2iterator(generator, length=None):
                 yield from generator()
             else:
                 length = 0
-                for e in generator():
+                for elem in generator():
                     length += 1
-                    yield e
+                    yield elem
                 self.length = length
         def __len__(self):
             if self.length is not None:
