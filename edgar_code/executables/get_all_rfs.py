@@ -1,6 +1,6 @@
 import sys
-from edgar_code.util.time_code import time_code
-from edgar_code.retrieve import rfs_for
+from edgar_code.time_code import time_code
+from edgar_code.retrieve import get_rfs
 
 
 def main():
@@ -9,7 +9,7 @@ def main():
         for qtr in range(1, 5):
             with time_code(f'get_all_rfs({year}, {qtr})'):
                 size = (
-                    rfs_for(year, qtr)
+                    get_rfs(year, qtr)
 
                     # this reduction helps it fit in memory
                     .map_values(len)

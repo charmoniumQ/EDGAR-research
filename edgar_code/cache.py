@@ -24,11 +24,18 @@ class Serializer(Protocol):
     def dump(self, obj: Any, fil: BinaryFile) -> None:
         ...
 
-# TODO: allow caching 'named objects'. Cache the name instead of the object.
-# TODO: allow caching objects by provenance. Cache the thing you did to make the object instead of the object.
+# TODO: allow caching 'named objects'. Cache the name instead of the
+# object.
+
+# TODO: allow caching objects by provenance. Cache the thing you did
+# to make the object instead of the object.
+
 # https://github.com/bmabey/provenance
+
 # TODO: functools.wraps
-# TODO: make the obj_stores (list of obj_store factories) more intuitive, easier for developers to write
+
+# TODO: make the obj_stores (list of obj_store factories) more
+# intuitive, easier for developers to write
 
 
 F1 = TypeVar('F1', bound=FuncType)

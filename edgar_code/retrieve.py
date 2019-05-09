@@ -80,7 +80,7 @@ def get_paragraphs(form_type: str, year: int, qtr: int) -> Bag[Union[List[str], 
 
 
 @cache_decor
-def get_rf_paragraphs(year: int, qtr: int) -> Bag[Union[List[str], Exception]]:
+def get_rfs(year: int, qtr: int) -> Bag[Union[List[str], Exception]]:
     return (
         get_paragraphs('10-K', year, qtr)
         .map(make_try_func(lambda para: parse.paragraphs2rf(para, year >= 2006)))
