@@ -1,8 +1,10 @@
-from .fs_util import (
-    rand_names,
-    sanitize_unused_fname,
-    new_directory,
-)
+from .time_code import time_code
+
+# from .fs_util import (
+#     rand_names,
+#     sanitize_unused_fname,
+#     new_directory,
+# )
 
 
 def download_retry(url, max_retries=10, cooldown=5):
@@ -32,18 +34,19 @@ def invert(dct):
     return {value: key for key, value in dct.items()}
 
 
-def dicts2csr(dicts, width=0):
-    from scipy.sparse import csr_matrix
-    indptr = [0]
-    indices = []
-    data = []
-    for dct in dicts:
-        for ind, val in dct.items():
-            width = max(width, ind)
-            indices.append(ind)
-            data.append(val)
-        indptr.append(len(indices))
-    return scipy.sparse.csr_matrix((data, indices, indptr), shape)
+# def dicts2csr(dicts, width=0):
+#     from scipy.sparse import csr_matrix
+#     indptr = [0]
+#     indices = []
+#     data = []
+#     for dct in dicts:
+#         for ind, val in dct.items():
+#             width = max(width, ind)
+#             indices.append(ind)
+#             data.append(val)
+#         indptr.append(len(indices))
+#     return scipy.sparse.csr_matrix((data, indices, indptr), shape)
+
 
 def generator2iterator(generator, length=None):
     class Iterator(object):
