@@ -1,3 +1,4 @@
+from typing import TYPE_CHECKING
 from edgar_code.util.time_code import time_code
 from edgar_code.util.list_dict import (
     merge_dicts, concat_lists, generator2iterator, invert, generator2fn_list
@@ -20,7 +21,7 @@ def download_retry(
     raise RuntimeError('unreachable code')
 
 
-class Struct: # pylint: disable=too-few-public-methods
+class Struct:
     pass
 
 

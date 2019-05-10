@@ -1,13 +1,13 @@
 from typing import cast
 import tempfile
-from edgar_code.cache import Cache, ObjectStore, FileStore, DirectoryStore
+from edgar_code.cache import Cache, MemoryStore, FileStore, DirectoryStore
 
 
 def test_cache() -> None:
     with tempfile.TemporaryDirectory() as cache_dir:
         calls = []
 
-        @Cache.decor(ObjectStore.create())
+        @Cache.decor(MemoryStore.create())
         def square1(x: int) -> int: # pylint: disable=invalid-name
             calls.append(x)
             return x**2

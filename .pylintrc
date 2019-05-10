@@ -66,9 +66,13 @@ disable=
     # that way, if you change the return or raise, same functionality
     no-else-raise,
     no-else-return,
+    # mypy requires that I subscript unsubscriptable objects
+    unsubscriptable-object,
     # I am not able to fix this most of the times
     # e.g. I want to extend dictionaries, so I subclass collections.UserDict
-    too-many-ancestors
+    too-many-ancestors,
+    too-few-public-methods,
+    too-many-instance-attributes
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

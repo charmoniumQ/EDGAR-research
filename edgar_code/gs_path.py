@@ -8,11 +8,13 @@ from typing_extensions import Protocol
 from google.cloud.storage import Blob, Bucket, Client
 
 
+#### Types ####
+
 class PathLike(Protocol):
     # pylint: disable=no-self-use,unused-argument
     def __truediv__(self, other: Union[str, PurePath]) -> PathLike:
         ...
-    def mkdir(self) -> None:
+    def mkdir(self, mode: int = 0, parents: bool = False, exist_ok: bool = False) -> None:
         ...
     def exists(self) -> bool:
         ...
@@ -23,7 +25,12 @@ class PathLike(Protocol):
     # pylint: disable=too-many-arguments
     def open(self, mode: str = 'r') -> IO[Any]:
         ...
+    @property
+    def parent(self) -> PathLike:
+        ...
 
+
+#### Main ####
 
 class GSPath:
     path: PurePath
@@ -69,7 +76,7 @@ class GSPath:
     def parent(self) -> GSPath:
         return GSPath(self.bucket, self.path.parent)
 
-    def mkdir(self, exist_ok: bool = True, parents: bool = True) -> None:
+    def mkdir(self, mode: int = 0, exist_ok: bool = True, parents: bool = True) -> None:
         # no notion of 'directories' in GS
         pass
 
@@ -121,10 +128,14 @@ class WGSFile(io.BytesIO):
 
 
 path_attrs = ['__truediv__', 'open', 'parent']
+def is_pathlike(obj: Any) -> bool:
+    return all(hasattr(obj, attr) for attr in path_attrs)
+
+
 def pathify(path: Union[str, PathLike]) -> PathLike:
     if isinstance(path, str):
         return Path(path)
-    elif all(hasattr(path, attr) for attr in path_attrs):
+    elif is_pathlike(path):
         return path
     else:
         raise TypeError()

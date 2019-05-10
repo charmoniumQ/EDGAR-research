@@ -1,18 +1,40 @@
 from __future__ import annotations
-import pickle
+import abc
 import shutil
 import functools
 import threading
-import collections
+from collections import UserDict as _UserDict
 from pathlib import Path
 import urllib.parse
-from typing import Callable, Any, TypeVar, cast, Tuple, Dict, Optional, Union, IO
+from typing import (
+    Callable, Any, TypeVar, cast, Tuple, Dict, Optional,
+    Union, IO, Hashable, TYPE_CHECKING
+)
 import logging
 from typing_extensions import Protocol
+from edgar_code.gs_path import PathLike
 
-
+#### Logging ####
 logging.basicConfig(level=logging.INFO)
 
+
+#### Types ####
+
+# https://stackoverflow.com/a/48554601/1078199
+if TYPE_CHECKING:
+    # we are running in mypy
+    # which understands UserDict[int, str]
+    UserDict = _UserDict
+else:
+    class FakeGenericMeta(type(_UserDict)):
+        def __getitem__(cls, item):
+            return cls
+
+    # I need to make `UserDict` subscriptable
+    # subscripting FakeGenericMeta is a no-op
+    # so `UserDict[int, str] is UserDict`
+    class UserDict(_UserDict, metaclass=FakeGenericMeta):
+        pass
 
 class Serializer(Protocol):
     # pylint: disable=unused-argument,no-self-use
@@ -22,13 +44,18 @@ class Serializer(Protocol):
         ...
 
 
-F2 = TypeVar('F2', bound=Callable[..., Any])
+#### Main ####
+
+CacheKey = TypeVar('CacheKey')
+CacheReturn = TypeVar('CacheReturn')
+CacheFunc = TypeVar('CacheFunc', bound=Callable[..., Any])
 class Cache:
     @classmethod
     def decor(
-            cls, obj_store: Callable[[str], ObjectStore],
+            cls,
+            obj_store: Callable[[str], ObjectStore[CacheKey, CacheReturn]],
             hit_msg: bool = False, miss_msg: bool = False, suffix: str = '',
-    ) -> Callable[[F2], F2]:
+    ) -> Callable[[CacheFunc], CacheFunc]:
         '''Decorator that creates a cached function
 
             >>> @Cache.decor(ObjectStore())
@@ -36,9 +63,9 @@ class Cache:
             ...     pass
 
         '''
-        def decor_(function: F2) -> F2:
+        def decor_(function: CacheFunc) -> CacheFunc:
             return cast(
-                F2,
+                CacheFunc,
                 functools.wraps(function)(
                     cls(obj_store, function, hit_msg, miss_msg, suffix)
                 )
@@ -49,7 +76,9 @@ class Cache:
 
     #pylint: disable=too-many-arguments
     def __init__(
-            self, obj_store: Callable[[str], ObjectStore], function: F2,
+            self,
+            obj_store: Callable[[str], ObjectStore[CacheKey, CacheReturn]],
+            function: CacheFunc,
             hit_msg: bool = False, miss_msg: bool = False, suffix: str = ''
     ) -> None:
         '''Cache a function.
@@ -81,7 +110,7 @@ class Cache:
             return self.function(*pos_args, **kwargs)
         else:
             with self.sem:
-                args_key = self.obj_store.to_key(pos_args, kwargs)
+                args_key = self.obj_store.args2key(pos_args, kwargs)
                 if args_key in self.obj_store:
                     if self.hit_msg:
                         logging.info('hit %s with %s, %s',
@@ -104,38 +133,52 @@ class Cache:
         return f'Cache of {self.name} with {store_type}'
 
 
-class ObjectStore(collections.UserDict): # type: ignore
+ObjectStoreKey = TypeVar('ObjectStoreKey')
+ObjectStoreValue = TypeVar('ObjectStoreValue')
+class ObjectStore(UserDict[ObjectStoreKey, ObjectStoreValue], abc.ABC):
     @classmethod
-    def create(cls, *args: Any, **kwargs: Any) -> Callable[[str], ObjectStore]:
+    def create(
+            cls, *args: Any, **kwargs: Any
+    ) -> Callable[[str], ObjectStore[ObjectStoreKey, ObjectStoreValue]]:
         '''Curried init. Name will be applied later.'''
         @functools.wraps(cls)
-        def create_(name: str) -> ObjectStore:
+        def create_(name: str) -> ObjectStore[ObjectStoreKey, ObjectStoreValue]:
             return cls(*args, name=name, **kwargs) # type: ignore
         return create_
 
     def __init__(self, name: str) -> None:
-        self.name = name
         super().__init__()
+        self.name = name
 
-    def to_key(self, args: Tuple[Any, ...], kwargs: Dict[str, Any]) -> Any:
+    @abc.abstractmethod
+    def args2key(self, args: Tuple[Any, ...], kwargs: Dict[str, Any]) -> ObjectStoreKey:
+        # pylint: disable=unused-argument,no-self-use
+        ...
+
+
+class MemoryStore(ObjectStore[Hashable, Any]):
+    def __init__(self, name: str):
+        # pylint: disable=non-parent-init-called
+        ObjectStore.__init__(self, name)
+
+    def args2key(self, args: Tuple[Any, ...], kwargs: Dict[str, Any]) -> Hashable:
         # pylint: disable=no-self-use
-        # return hashable((args, kwargs))
-        if kwargs:
-            args = args + (kwargs,)
-        return safe_name(args)
+        return to_hashable((args, kwargs))
 
 
-class FileStore(ObjectStore):
+class FileStore(MemoryStore):
     '''An obj_store that persists at ./${CACHE_PATH}/${FUNCTION_NAME}_cache.pickle'''
 
     def __init__(
-            self, cache_path: Path, name: str, serializer: Optional[Serializer] = None,
+            self, cache_path: PathLike, name: str, serializer: Optional[Serializer] = None,
     ):
-        super().__init__(name)
-        self.serializer: Serializer = cast(
-            Serializer,
-            serializer if serializer is not None else pickle
-        )
+        # pylint: disable=non-parent-init-called,super-init-not-called
+        ObjectStore.__init__(self, name)
+        if serializer is None:
+            import pickle
+            self.serializer = cast(Serializer, pickle)
+        else:
+            self.serializer = serializer
         self.cache_path = pathify(cache_path) / (self.name + '_cache.pickle')
         self.loaded = False
         self.data = {}
@@ -150,6 +193,10 @@ class FileStore(ObjectStore):
                 self.cache_path.parent.mkdir(parents=True, exist_ok=True)
                 self.data = {}
 
+    def args2key(self, args: Tuple[Any, ...], kwargs: Dict[str, Any]) -> Hashable:
+        # pylint: disable=no-self-use
+        return to_hashable((args, kwargs))
+
     def commit(self) -> None:
         self.load_if_not_loaded()
         if self.data:
@@ -159,12 +206,12 @@ class FileStore(ObjectStore):
             if self.cache_path.exists():
                 self.cache_path.unlink()
 
-    def __setitem__(self, key: Any, obj: Any) -> None:
+    def __setitem__(self, key: Hashable, obj: Any) -> None:
         self.load_if_not_loaded()
         super().__setitem__(key, obj)
         self.commit()
 
-    def __delitem__(self, key: Any) -> None:
+    def __delitem__(self, key: Hashable) -> None:
         self.load_if_not_loaded()
         super().__delitem__(key)
         self.commit()
@@ -175,68 +222,71 @@ class FileStore(ObjectStore):
         self.commit()
 
 
-# TODO: make this Path
-Key = Any
-class DirectoryStore(ObjectStore):
+class DirectoryStore(ObjectStore[PathLike, Any]):
     '''Stores objects at ./${OBJ_PATH}/${FUNCTION_NAME}/${urlencode(args)}.pickle'''
 
     def __init__(
-            self, object_path: Path, name: str,
+            self, object_path: PathLike, name: str,
             serializer: Optional[Serializer] = None
     ) -> None:
-        super().__init__(name)
-        self.serializer: Serializer = cast(
-            Serializer,
-            serializer if serializer is not None else pickle
-        )
+        # pylint: disable=non-parent-init-called
+        ObjectStore.__init__(self, name)
+        if serializer is None:
+            import pickle
+            self.serializer = cast(Serializer, pickle)
+        else:
+            self.serializer = serializer
         self.obj_path = pathify(object_path) / self.name
 
-    def to_key(self, args: Tuple[Any, ...], kwargs: Dict[str, Any]) -> Key:
+    def args2key(self, args: Tuple[Any, ...], kwargs: Dict[str, Any]) -> PathLike:
         if kwargs:
             args = args + (kwargs,)
-        fname = urllib.parse.quote(f'{safe_name(args)}.pickle', safe='')
+        fname = urllib.parse.quote(f'{safe_str(args)}.pickle', safe='')
         return self.obj_path / fname
 
-    def __setitem__(self, path: Key, obj: Any) -> None:
+    def __setitem__(self, path: PathLike, obj: Any) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open('wb') as fil:
             self.serializer.dump(obj, fil)
 
-    def __delitem__(self, path: Key) -> None:
+    def __delitem__(self, path: PathLike) -> None:
         path.unlink()
 
-    def __getitem__(self, path: Key) -> Any:
+    def __getitem__(self, path: PathLike) -> Any:
         with path.open('rb') as fil:
             return self.serializer.load(fil)
 
-    def __contains__(self, path: Key) -> bool:
-        return bool(path.exists())
+    def __contains__(self, path: Any) -> bool:
+        if hasattr(path, 'exists'):
+            return bool(path.exists())
+        else:
+            return False
 
     def clear(self) -> None:
         if hasattr(self.obj_path, 'rmtree'):
             cast(Any, self.obj_path).rmtree()
         else:
-            shutil.rmtree(self.obj_path)
+            shutil.rmtree(str(self.obj_path))
 
 
-def hashable(obj: Any) -> Any:
+def to_hashable(obj: Any) -> Hashable:
     '''Converts args and kwargs into a hashable type (overridable)'''
     try:
         hash(obj)
     except TypeError:
         if hasattr(obj, 'items'):
             # turn dictionaries into frozenset((key, val))
-            return tuple(sorted((key, hashable(val))) for key, val in obj.items())
+            return tuple(sorted((key, to_hashable(val))) for key, val in obj.items())
         elif hasattr(obj, '__iter__'):
             # turn iterables into tuples
-            return tuple(hashable(val) for val in obj)
+            return tuple(to_hashable(val) for val in obj)
         else:
             raise TypeError(f"I don't know how to hash {obj} ({type(obj)})")
     else:
-        return obj
+        return cast(Hashable, obj)
 
 
-def safe_name(obj: Any) -> str:
+def safe_str(obj: Any) -> str:
     '''
 Safe names are compact, unique, urlsafe, and equal when the objects are equal
 
@@ -252,24 +302,26 @@ str does not work because x == y does not imply str(x) == str(y).
     True
 '''
     if isinstance(obj, int):
-        return str(obj)
+        ret = str(obj)
     elif isinstance(obj, float):
-        return str(round(obj, 3))
+        ret = str(round(obj, 3))
     elif isinstance(obj, str):
-        return urllib.parse.quote(repr(obj))
+        ret = repr(obj)
+    elif isinstance(obj, list):
+        ret = '[' + ','.join(map(safe_str, obj)) + ']'
     elif isinstance(obj, tuple):
-        return '%2C'.join(map(safe_name, obj))
+        ret = '(' + ','.join(map(safe_str, obj)) + ')'
     elif isinstance(obj, dict):
-        contents = '%2C'.join(
-            safe_name(key) + '%3A' + safe_name(val)
+        ret = '{' + ','.join(
+            safe_str(key) + ':' + safe_str(val)
             for key, val in sorted(obj.items())
-        )
-        return '%7B' + contents + '%7D'
+        ) + '}'
     else:
         raise TypeError()
+    return urllib.parse.quote(ret, safe='')
 
 
-def pathify(obj: Union[str, Path]) -> Path:
+def pathify(obj: Union[str, PathLike]) -> PathLike:
     if isinstance(obj, str):
         return Path(obj)
     else:
