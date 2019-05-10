@@ -1,6 +1,6 @@
 cache/
 config.yaml
-*service_account.json
+service_account.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

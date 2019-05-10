@@ -8,7 +8,7 @@ from google.cloud.storage import Blob, Bucket, Client
 
 
 # TODO: config
-# export GOOGLE_APPLICATION_CREDENTIALS=edgar_deploy/main-722.service_account.json
+# export GOOGLE_APPLICATION_CREDENTIALS=
 # python3 -m edgar_code.executables.get_all_rfs
 
 
@@ -24,6 +24,7 @@ class PathLike(Protocol):
         ...
     def iterdir(self) -> Iterable[PathLike]:
         ...
+    # pylint: disable=too-many-arguments
     def open(self, mode: str = 'r', buffering: int = 0, encoding: Optional[str] = None,
              errors: Optional[str] = None, newline: Optional[str] = None) -> IO[Any]:
         ...
@@ -48,7 +49,6 @@ class GSPath:
     def __init__(self, bucket: Union[str, Bucket], path: Union[PathLike, str]):
         self.path = PurePath(str(path))
         if isinstance(bucket, str):
-            # TODO: use a weakref factory for this
             bucket = Client().bucket(bucket)
         self.bucket = bucket
         self.blob = self.bucket.blob(str(self.path))
@@ -61,6 +61,8 @@ class GSPath:
         self.bucket = Client().bucket(data['bucket'])
         self.blob = self.bucket.blob(str(self.path))
 
+    # Otherwise pylint thinks GSPath is undefined
+    # pylint: disable=undefined-variable
     def __truediv__(self, other: Union[str, PathLike]) -> GSPath:
         return GSPath(self.bucket, self.path / str(other))
 
@@ -91,11 +93,11 @@ class GSPath:
         for blob in self.bucket.list_blobs(prefix=f'{self.path!s}/'):
             yield GSPath.from_blob(blob)
 
+    # pylint: disable=too-many-arguments,unused-argument
     def open(self, mode: str = 'r', buffering: int = 0,
              encoding: Optional[str] = 'UTF-8',
              errors: Optional[str] = 'strict',
-             newline: Optional[str] = '\n',
-    )-> IO[Any]: # pylint: disable=too-many-arguments
+             newline: Optional[str] = '\n') -> IO[Any]:
         # cast away the Optional
         encoding = encoding if encoding is not None else 'UTF-8'
         if 'w' in mode:
@@ -118,7 +120,7 @@ class GSPath:
 
 
 class WGSFile(io.BytesIO):
-    def __init__(self, gs_path: GSPath, mode: str):
+    def __init__(self, gs_path: GSPath, _: str):
         super().__init__()
         self.gs_path = gs_path
 

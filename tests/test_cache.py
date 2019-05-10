@@ -12,7 +12,7 @@ def test_cache() -> None:
             calls.append(x)
             return x**2
 
-        @Cache.decor(FileStore.create(cache_dir))
+        @Cache.decor(FileStore.create(str(cache_dir)))
         def square2(x: int) -> int: # pylint: disable=invalid-name
             calls.append(x)
             return x**2

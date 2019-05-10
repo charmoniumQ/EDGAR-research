@@ -54,10 +54,10 @@ def generator2iterator(generator, length=None):
             self.length = length
         def __iter__(self):
             if self.length is not None:
-                yield from generator()
+                yield from iter(generator())
             else:
                 length = 0
-                for elem in generator():
+                for elem in iter(generator()):
                     length += 1
                     yield elem
                 self.length = length

@@ -248,8 +248,8 @@ def test_remove_header() -> None:
             'Item 1. Business',
         ]),
     ]
-    for n, paragraphs in test_cases:
-        assert parse.remove_header(paragraphs) == paragraphs[-n:]
+    for num, paragraphs in test_cases:
+        assert parse.remove_header(paragraphs) == paragraphs[-num:]
 
 
 def test_paragraphs2rf() -> None:

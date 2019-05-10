@@ -8,8 +8,9 @@ from edgar_code.util import time_code
 
 stats: Dict[Tuple[str, ...], List[float]] = collections.defaultdict(list)
 
+
 @time_code.decor()
-def f1() -> None:
+def f1() -> None: # pylint: disable=invalid-name
     stats[('f1',)].append(0)
 
     # includes the time of callees
@@ -27,7 +28,7 @@ def f1() -> None:
     raise ValueError()
 
 @time_code.decor()
-def f2() -> None:
+def f2() -> None: # pylint: disable=invalid-name
     stats[('f1', 'f2')].append(0)
 
     # context manager works just as well as function decorator
@@ -48,7 +49,7 @@ def test_time_code() -> None:
         # if exception occurs, it is propogated up
         f1()
 
-    global stats
+    global stats #pylint: disable=global-statement
     stats = dict(stats)
     for key in time_code.get_stats().keys() | stats.keys():
         for expected_val, actual_val in zip(stats[key], time_code.get_stats()[key]):

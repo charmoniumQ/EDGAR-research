@@ -1,5 +1,6 @@
 import pickle
 import shutil
+import functools
 import threading
 import collections
 from pathlib import Path
@@ -32,15 +33,10 @@ class Serializer(Protocol):
 
 # https://github.com/bmabey/provenance
 
-# TODO: functools.wraps
-
-# TODO: make the obj_stores (list of obj_store factories) more
-# intuitive, easier for developers to write
-
-
 F1 = TypeVar('F1', bound=FuncType)
 def make_lazy_callable(make_callable: F1) -> F1:
     callablef = None
+    @functools.wraps(make_callable)
     def lazy_f(*args, **kwargs):
         if callablef is None:
             callabelf = make_callable()
@@ -81,7 +77,12 @@ class Cache:
 
         '''
         def decor_(function: F2) -> F2:
-            return cast(F2, cls(obj_store, function, hit_msg, miss_msg, suffix))
+            return cast(
+                F2,
+                functools.wraps(function)(
+                    cls(obj_store, function, hit_msg, miss_msg, suffix)
+                )
+            )
         return decor_
 
     #pylint: disable=too-many-arguments

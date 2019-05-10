@@ -1,23 +1,28 @@
 import functools
 from typing import Union, Callable, TypeVar, List
 import dask.bag
-from edgar_code.cloud import cache_path, BagStore
-from edgar_code.cache import Cache
 import edgar_code.parse as parse
+import edgar_code.config as config
+from edgar_code.cache import Cache
+from edgar_code.bag_store import BagStore
 
 
 Index = parse.Index
 Bag = dask.bag.Bag
 
 
-# TODO: allow the caller to set the cache path and S3 credentials, instead of
-# setting it here. Suppose a different application wants to use this as a
-# library. They might want to cache it somewhere else, or not at all. It makes
-# more logical sense that the caller in edgar_code.executables sets the cache
-# path and S3 credentials.
+# This is not a library. This is an application. Hence the S3
+# credentials and cache path are set by the config module.
+
+# allow the caller to set the cache path
+# and S3 credentials, instead of setting it here. Suppose a different
+# application wants to use this as a library. They might want to cache
+# it somewhere else, or not at all. It makes more logical sense that
+# the caller in edgar_code.executables sets the cache path and S3
+# credentials.
 
 
-cache_decor = Cache.decor(BagStore.create(cache_path / 'bags'), miss_msg=True)
+cache_decor = Cache.decor(BagStore.create(config.cache_path / 'bags'), miss_msg=True)
 #cache_decor = lambda x: x
 
 

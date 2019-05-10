@@ -238,7 +238,6 @@ Puts newlines between semantic paragraphs'''
 
 
 def text2paragraphs(btext: bytes) -> List[str]:
-    # TODO: see if SGML has any hints on the encoding
     text = btext.decode(chardet.detect(btext)['encoding'])
 
     tags = ['PAGE', 'C', 'S', 'CAPTION']
