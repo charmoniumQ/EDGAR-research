@@ -1,3 +1,4 @@
+from __future__ import annotations
 import pickle
 import shutil
 import functools
@@ -5,7 +6,7 @@ import threading
 import collections
 from pathlib import Path
 import urllib.parse
-from typing import Callable, Any, TypeVar, cast, Tuple, Dict, Optional, Union
+from typing import Callable, Any, TypeVar, cast, Tuple, Dict, Optional, Union, IO
 import logging
 from typing_extensions import Protocol
 
@@ -13,67 +14,26 @@ from typing_extensions import Protocol
 logging.basicConfig(level=logging.INFO)
 
 
-FuncType = Callable[..., Any]
-class Hashable(Protocol): # pylint: disable=too-few-public-methods
-    ...
-class BinaryFile(Protocol): # pylint: disable=too-few-public-methods
-    ...
 class Serializer(Protocol):
     # pylint: disable=unused-argument,no-self-use
-    def load(self, fil: BinaryFile) -> Any:
+    def load(self, fil: IO[bytes]) -> Any:
         ...
-    def dump(self, obj: Any, fil: BinaryFile) -> None:
+    def dump(self, obj: Any, fil: IO[bytes]) -> None:
         ...
 
-# TODO: allow caching 'named objects'. Cache the name instead of the
-# object.
 
-# TODO: allow caching objects by provenance. Cache the thing you did
-# to make the object instead of the object.
-
-# https://github.com/bmabey/provenance
-
-F1 = TypeVar('F1', bound=FuncType)
-def make_lazy_callable(make_callable: F1) -> F1:
-    callablef = None
-    @functools.wraps(make_callable)
-    def lazy_f(*args, **kwargs):
-        if callablef is None:
-            callabelf = make_callable()
-        return callabelf(*args, **kwargs)
-    return cast(F1, lazy_f)
-
-
-class ObjectStore(collections.UserDict): #pylint: disable=too-many-ancestors
-    @classmethod
-    def create(cls, *args, **kwargs):
-        '''Curried init. Name will be applied later.'''
-        def create_(name):
-            return cls(*args, name=name, **kwargs)
-        return create_
-
-    def __init__(self, name: str):
-        self.name = name
-        super().__init__()
-
-    def to_key(self, args: Tuple[Any, ...], kwargs: Dict[str, Any]) -> Any:
-        # pylint: disable=no-self-use
-        # return hashable((args, kwargs))
-        if kwargs:
-            args = args + (kwargs,)
-        return safe_name(args)
-
-
-F2 = TypeVar('F2', bound=FuncType)
+F2 = TypeVar('F2', bound=Callable[..., Any])
 class Cache:
     @classmethod
-    def decor(cls, obj_store: Callable[[str], ObjectStore], hit_msg=False,
-              miss_msg=False, suffix='') -> Callable[[F2], F2]:
+    def decor(
+            cls, obj_store: Callable[[str], ObjectStore],
+            hit_msg: bool = False, miss_msg: bool = False, suffix: str = '',
+    ) -> Callable[[F2], F2]:
         '''Decorator that creates a cached function
 
-            @Cache.decor(obj_store)
-            def foo():
-                pass
+            >>> @Cache.decor(ObjectStore())
+            >>> def foo():
+            ...     pass
 
         '''
         def decor_(function: F2) -> F2:
@@ -85,9 +45,13 @@ class Cache:
             )
         return decor_
 
+    disabled: bool
+
     #pylint: disable=too-many-arguments
-    def __init__(self, obj_store: Callable[[str], ObjectStore], function: F2,
-                 hit_msg=False, miss_msg=False, suffix=''):
+    def __init__(
+            self, obj_store: Callable[[str], ObjectStore], function: F2,
+            hit_msg: bool = False, miss_msg: bool = False, suffix: str = ''
+    ) -> None:
         '''Cache a function.
 
         Note this uses `function.__qualname__` to determine the file
@@ -110,20 +74,26 @@ class Cache:
         self.miss_msg = miss_msg
         self.sem = threading.RLock()
         self.__qualname__ = f'Cache({self.name})'
+        self.disabled = False
 
-    def __call__(self, *pos_args, **kwargs) -> Any:
-        with self.sem:
-            args_key = self.obj_store.to_key(pos_args, kwargs)
-            if args_key in self.obj_store:
-                if self.hit_msg:
-                    logging.info('hit %s with %s, %s', self.name, pos_args, kwargs)
-                res = self.obj_store[args_key]
-            else:
-                if self.miss_msg:
-                    logging.info('miss %s with %s, %s', self.name, pos_args, kwargs)
-                res = self.function(*pos_args, **kwargs)
-                self.obj_store[args_key] = res
-            return res
+    def __call__(self, *pos_args: Any, **kwargs: Any) -> Any:
+        if self.disabled:
+            return self.function(*pos_args, **kwargs)
+        else:
+            with self.sem:
+                args_key = self.obj_store.to_key(pos_args, kwargs)
+                if args_key in self.obj_store:
+                    if self.hit_msg:
+                        logging.info('hit %s with %s, %s',
+                                     self.name, pos_args, kwargs)
+                    res = self.obj_store[args_key]
+                else:
+                    if self.miss_msg:
+                        logging.info('miss %s with %s, %s',
+                                     self.name, pos_args, kwargs)
+                    res = self.function(*pos_args, **kwargs)
+                    self.obj_store[args_key] = res
+                return res
 
     def clear(self) -> None:
         '''Removes all cached items'''
@@ -134,25 +104,54 @@ class Cache:
         return f'Cache of {self.name} with {store_type}'
 
 
-class FileStore(ObjectStore): # pylint: disable=too-many-ancestors
+class ObjectStore(collections.UserDict): # type: ignore
+    @classmethod
+    def create(cls, *args: Any, **kwargs: Any) -> Callable[[str], ObjectStore]:
+        '''Curried init. Name will be applied later.'''
+        @functools.wraps(cls)
+        def create_(name: str) -> ObjectStore:
+            return cls(*args, name=name, **kwargs) # type: ignore
+        return create_
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+        super().__init__()
+
+    def to_key(self, args: Tuple[Any, ...], kwargs: Dict[str, Any]) -> Any:
+        # pylint: disable=no-self-use
+        # return hashable((args, kwargs))
+        if kwargs:
+            args = args + (kwargs,)
+        return safe_name(args)
+
+
+class FileStore(ObjectStore):
     '''An obj_store that persists at ./${CACHE_PATH}/${FUNCTION_NAME}_cache.pickle'''
 
-    def __init__(self, cache_path: Path, name: str, serializer: Optional[Serializer] = None):
+    def __init__(
+            self, cache_path: Path, name: str, serializer: Optional[Serializer] = None,
+    ):
         super().__init__(name)
         self.serializer: Serializer = cast(
             Serializer,
             serializer if serializer is not None else pickle
         )
         self.cache_path = pathify(cache_path) / (self.name + '_cache.pickle')
+        self.loaded = False
+        self.data = {}
 
-        if self.cache_path.exists():
-            with self.cache_path.open('rb') as fil:
-                self.data = self.serializer.load(fil)
-        else:
-            self.cache_path.parent.mkdir(parents=True, exist_ok=True)
-            self.data = {}
+    def load_if_not_loaded(self) -> None:
+        if not self.loaded:
+            self.loaded = True
+            if self.cache_path.exists():
+                with self.cache_path.open('rb') as fil:
+                    self.data = self.serializer.load(fil)
+            else:
+                self.cache_path.parent.mkdir(parents=True, exist_ok=True)
+                self.data = {}
 
     def commit(self) -> None:
+        self.load_if_not_loaded()
         if self.data:
             with self.cache_path.open('wb') as fil:
                 self.serializer.dump(self.data, fil)
@@ -160,26 +159,31 @@ class FileStore(ObjectStore): # pylint: disable=too-many-ancestors
             if self.cache_path.exists():
                 self.cache_path.unlink()
 
-    def __setitem__(self, key: Hashable, obj: Any) -> None:
+    def __setitem__(self, key: Any, obj: Any) -> None:
+        self.load_if_not_loaded()
         super().__setitem__(key, obj)
         self.commit()
 
-    def __delitem__(self, key: Hashable) -> None:
+    def __delitem__(self, key: Any) -> None:
+        self.load_if_not_loaded()
         super().__delitem__(key)
         self.commit()
 
     def clear(self) -> None:
+        self.load_if_not_loaded()
         super().clear()
         self.commit()
 
 
 # TODO: make this Path
 Key = Any
-class DirectoryStore(ObjectStore): # pylint: disable=too-many-ancestors
+class DirectoryStore(ObjectStore):
     '''Stores objects at ./${OBJ_PATH}/${FUNCTION_NAME}/${urlencode(args)}.pickle'''
 
-    def __init__(self, object_path: Path, name: str,
-                 serializer: Optional[Serializer] = None):
+    def __init__(
+            self, object_path: Path, name: str,
+            serializer: Optional[Serializer] = None
+    ) -> None:
         super().__init__(name)
         self.serializer: Serializer = cast(
             Serializer,
@@ -206,7 +210,7 @@ class DirectoryStore(ObjectStore): # pylint: disable=too-many-ancestors
             return self.serializer.load(fil)
 
     def __contains__(self, path: Key) -> bool:
-        return path.exists()
+        return bool(path.exists())
 
     def clear(self) -> None:
         if hasattr(self.obj_path, 'rmtree'):
@@ -244,6 +248,8 @@ str does not work because x == y does not imply str(x) == str(y).
     True
     >>> str(a) == str(b)
     False
+    >>> safe_str(a) == safe_str(b)
+    True
 '''
     if isinstance(obj, int):
         return str(obj)

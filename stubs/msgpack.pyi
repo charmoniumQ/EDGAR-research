@@ -19,14 +19,14 @@ def dumps(
     ...
 def loads(
         b: bytes,
-        raw=True,
+        raw: bool = ...,
         object_hook: Optional[Callable[[Any], Any]] = ...,
         use_list: bool = ...,
 ) -> Any:
     ...
 def load(
         f: Any,
-        raw=True,
+        raw: bool = ...,
         object_hook: Optional[Callable[[Any], Any]] = ...,
         use_list: bool = ...,
 ) -> Any:

@@ -11,6 +11,7 @@ class Bucket:
         ...
     def list_blobs(self, prefix: str) -> Iterable[Blob]:
         ...
+    name: str
 
 
 class Blob:

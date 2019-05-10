@@ -66,8 +66,9 @@ disable=
     # that way, if you change the return or raise, same functionality
     no-else-raise,
     no-else-return,
-    # mypy types require that I subscript object e.g. List[T]
-    unsubscriptable-object
+    # I am not able to fix this most of the times
+    # e.g. I want to extend dictionaries, so I subclass collections.UserDict
+    too-many-ancestors
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -184,6 +185,7 @@ dummy-variables-rgx=_+$|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?$)|dummy|^ignored_|^unused_
 
 const-rgx=(([a-zA-Z_][a-zA-Z0-9_]*)|(__.*__))$
 class-rgx=[A-Z_][a-zA-Z0-9]*$
+argument-rgx=[a-z_][a-z0-9_]{1,30}$
 
 # Argument names that match this expression will be ignored. Default to name
 # with leading underscore.

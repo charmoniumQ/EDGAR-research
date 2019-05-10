@@ -1,5 +1,4 @@
 import datetime
-import importlib
 import io
 import collections
 import edgar_code.msgpack2 as msgpack2

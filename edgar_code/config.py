@@ -10,3 +10,5 @@ if cred_path.exists():
 cache_path = GSPath.from_url('gs://results-7/cache')
 
 results_path = GSPath.from_url('gs://results-7/results')
+
+cache = True

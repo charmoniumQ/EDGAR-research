@@ -113,7 +113,7 @@ this is where the doc should be
     assert parse.find_form(fileinfos, '4') == b'\nthis is where the doc should be\n'
 
 
-def test_parse_html():
+def test_parse_html() -> None:
     #pylint: disable=line-too-long
     raw_html1 = b'''
 <!-- ignores comments -->
@@ -149,8 +149,8 @@ This is a paragraph.
     assert not parse.is_html(b'3 < 4 and 6 > 5')
     paragraphs = parse.html2paragraphs(raw_html1)
     real_paragraphs = filter(bool, map(lambda string: string.strip(), paragraphs))
-    for paragraph, expected_paragraphs in zip(real_paragraphs, expected_paragraphs):
-        assert paragraph.strip() == expected_paragraphs
+    for paragraph, expected_paragraph in zip(real_paragraphs, expected_paragraphs):
+        assert paragraph.strip() == expected_paragraph
 
 
 def test_parse_text() -> None:

@@ -30,7 +30,7 @@ def download_index_lines(year: int, qtr: int) -> Iterable[bytes]:
         return uncompressed_file
 
 
-def parse_header(lines: Iterator[bytes]):
+def parse_header(lines: Iterator[bytes]) -> List[str]:
     # see https://www.sec.gov/Archives/edgar/full-index/2016/QTR3/form.idx
 
     # the headings occur in a different order based on what index you are
@@ -85,7 +85,9 @@ def parse_body(
         )
 
 
-def filter_form_type(records: Iterable[Index], this_form_type: str):
+def filter_form_type(
+        records: Iterable[Index], this_form_type: str
+) -> Iterator[Index]:
     found_section = False
     for record in records:
         if record.form_type == this_form_type:
@@ -196,7 +198,7 @@ def is_html(text: bytes) -> bool:
     tags = b'p div td'.split(b' ')
     tags += [tag.upper() for tag in tags]
     return any(
-        b'</' + tag + b'>' in text for tag in tags
+        text.find(b'</' + tag + b'>') != -1 for tag in tags
     )
 
 

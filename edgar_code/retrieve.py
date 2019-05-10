@@ -7,28 +7,26 @@ from edgar_code.cache import Cache
 from edgar_code.bag_store import BagStore
 
 
+T = TypeVar('T')
+U = TypeVar('U')
+Result = Union[T, Exception]
 Index = parse.Index
 Bag = dask.bag.Bag
 
 
 # This is not a library. This is an application. Hence the S3
-# credentials and cache path are set by the config module.
-
-# allow the caller to set the cache path
-# and S3 credentials, instead of setting it here. Suppose a different
-# application wants to use this as a library. They might want to cache
-# it somewhere else, or not at all. It makes more logical sense that
-# the caller in edgar_code.executables sets the cache path and S3
-# credentials.
+# credentials and cache path are set by the config module.  It is
+# somewhat configurable through edgar_code.config, and modifying the
+# Cache instances directly.
 
 
-cache_decor = Cache.decor(BagStore.create(config.cache_path / 'bags'), miss_msg=True)
-#cache_decor = lambda x: x
+if config.cache:
+    cache_decor = Cache.decor(BagStore.create(config.cache_path / 'bags'), miss_msg=True)
+else:
+    cache_decor = lambda x: x
 
 
-T = TypeVar('T')
-U = TypeVar('U')
-def make_try_func(func: Callable[[T], U]) -> Callable[[Union[T, Exception]], Union[U, Exception]]:
+def make_try_func(func: Callable[[T], U]) -> Callable[[Result[T]], Result[U]]:
     @functools.wraps(func)
     def try_func(arg: Union[T, Exception]) -> Union[U, Exception]:
         if isinstance(arg, Exception):
@@ -43,15 +41,14 @@ def make_try_func(func: Callable[[T], U]) -> Callable[[Union[T, Exception]], Uni
 
 npartitions = 100
 @cache_decor
-def get_indexes(form_type: str, year: int, qtr: int) -> Bag[Index]:
+def get_indexes(form_type: str, year: int, qtr: int) -> 'Bag[Index]':
     return dask.bag.from_sequence(
         parse.download_indexes(form_type, year, qtr),
         npartitions=npartitions)
 
 
-# TODO: Result = lambda T: Union[T, Exception]
 @cache_decor
-def get_raw_forms(form_type: str, year: int, qtr: int) -> Bag[Union[bytes, Exception]]:
+def get_raw_forms(form_type: str, year: int, qtr: int) -> 'Bag[Result[bytes]]':
     def get_raw_forms_f(index: Index) -> bytes:
         sgml = parse.download_retry(index.url)
         fileinfos = parse.sgml2fileinfos(sgml)
@@ -65,7 +62,7 @@ def get_raw_forms(form_type: str, year: int, qtr: int) -> Bag[Union[bytes, Excep
 
 
 @cache_decor
-def get_paragraphs(form_type: str, year: int, qtr: int) -> Bag[Union[List[str], Exception]]:
+def get_paragraphs(form_type: str, year: int, qtr: int) -> 'Bag[Result[List[str]]]':
     def get_main_texts_f(raw_form: bytes) -> List[str]:
         if parse.is_html(raw_form):
             raw_text = parse.html2paragraphs(raw_form)
@@ -85,7 +82,7 @@ def get_paragraphs(form_type: str, year: int, qtr: int) -> Bag[Union[List[str], 
 
 
 @cache_decor
-def get_rfs(year: int, qtr: int) -> Bag[Union[List[str], Exception]]:
+def get_rfs(year: int, qtr: int) -> 'Bag[Result[List[str]]]':
     return (
         get_paragraphs('10-K', year, qtr)
         .map(make_try_func(lambda para: parse.paragraphs2rf(para, year >= 2006)))

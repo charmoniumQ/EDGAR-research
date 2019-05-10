@@ -1,14 +1,13 @@
-from .time_code import time_code
-
-# from .fs_util import (
-#     rand_names,
-#     sanitize_unused_fname,
-#     new_directory,
-# )
+from edgar_code.util.time_code import time_code
+from edgar_code.util.list_dict import (
+    merge_dicts, concat_lists, generator2iterator, invert, generator2fn_list
+)
 
 
-def download_retry(url, max_retries=10, cooldown=5):
-    import urllib
+def download_retry(
+        url: str, max_retries: int = 10, cooldown: float = 5
+) -> bytes:
+    import urllib.request
     import time
     for retry in range(max_retries):
         try:
@@ -18,20 +17,11 @@ def download_retry(url, max_retries=10, cooldown=5):
                 raise exc
             else:
                 time.sleep(cooldown)
+    raise RuntimeError('unreachable code')
 
 
 class Struct: # pylint: disable=too-few-public-methods
     pass
-
-
-def generator_to_list(generator):
-    def func(*args, **kwargs):
-        return list(generator(*args, **kwargs))
-    return func
-
-
-def invert(dct):
-    return {value: key for key, value in dct.items()}
 
 
 # def dicts2csr(dicts, width=0):
@@ -47,38 +37,6 @@ def invert(dct):
 #         indptr.append(len(indices))
 #     return scipy.sparse.csr_matrix((data, indices, indptr), shape)
 
-
-def generator2iterator(generator, length=None):
-    class Iterator:
-        def __init__(self):
-            self.length = length
-        def __iter__(self):
-            if self.length is not None:
-                yield from iter(generator())
-            else:
-                length = 0
-                for elem in iter(generator()):
-                    length += 1
-                    yield elem
-                self.length = length
-        def __len__(self):
-            if self.length is not None:
-                return self.length
-            else:
-                raise RuntimeError('len not known yet')
-    return Iterator()
-
-def concat_lists(lists):
-    ret = []
-    for list_ in lists:
-        ret.extend(list_)
-    return ret
-
-def merge_dicts(dicts):
-    ret = {}
-    for dict_ in dicts:
-        ret.update(dict_)
-    return ret
 
 # import traceback
 # import signal

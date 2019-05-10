@@ -1,5 +1,7 @@
 import functools
-from typing import cast, Generator, Any, Callable, TypeVar, Tuple, Dict, List, Optional
+from typing import (
+    cast, Generator, Any, Callable, TypeVar, Tuple, Dict, List, Optional
+)
 import logging
 import datetime
 import contextlib
@@ -11,7 +13,7 @@ F = TypeVar('F', bound=FuncType)
 
 
 class _TimeCode:
-    def __init__(self):
+    def __init__(self) -> None:
         self.stack: List[str] = []
         self.stats: Dict[Tuple[str, ...], List[float]] = collections.defaultdict(list)
 
@@ -24,7 +26,9 @@ class _TimeCode:
         return dict(self.stats)
 
     @contextlib.contextmanager
-    def ctx(self, name: str, print_start=True, print_time=True) -> Generator[None, None, None]:
+    def ctx(
+            self, name: str, print_start: bool = True, print_time: bool = True
+    ) -> Generator[None, None, None]:
         '''Context that prints the wall-time taken to run the code inside.
 
     >>> time_code = _TimeCode()
@@ -74,7 +78,9 @@ much as general profiling.
         if exc:
             raise exc
 
-    def decor(self, print_start=True, print_time=True) -> Callable[[F], F]:
+    def decor(
+            self, print_start: bool = True, print_time: bool = True
+    ) -> Callable[[F], F]:
         '''Decorator for time_code
 
     >>> time_code = _TimeCode()
@@ -93,7 +99,7 @@ much as general profiling.
 
         def make_timed_func(func: F) -> F:
             @functools.wraps(func)
-            def timed_func(*func_args, **func_kwargs):
+            def timed_func(*func_args: Any, **func_kwargs: Any) -> Any:
                 with self.ctx(func.__qualname__, print_start, print_time):
                     return cast(F, func(*func_args, **func_kwargs))
             return cast(F, timed_func)
@@ -101,3 +107,6 @@ much as general profiling.
 
 
 time_code = _TimeCode()
+
+
+__all__ = ['time_code']
