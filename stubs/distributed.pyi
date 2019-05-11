@@ -1,5 +1,5 @@
 from typing import (
-    TypeVar, Generic, List, Callable, Iterable, Any
+    TypeVar, Generic, List, Callable, Iterable, Any, Union
 )
 from dask.bag import Bag
 
@@ -22,5 +22,8 @@ class Client:
     def map(self, func: Callable[[T], U], lst: Iterable[T]) -> List[Future[U]]:
         ...
 
-    def compute(self, obj: Bag[T], sync: bool = ...) -> Future[T]:
+    def compute(self, obj: Bag[T], sync: bool = ...) -> Union[List[T], Future[List[T]]]:
+        ...
+
+    def upload_file(self, path: str) -> None:
         ...

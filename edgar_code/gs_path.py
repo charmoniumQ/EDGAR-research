@@ -65,7 +65,7 @@ class GSPath:
 
     # Otherwise pylint thinks GSPath is undefined
     # pylint: disable=undefined-variable
-    def __truediv__(self, other: Union[str, PathLike]) -> GSPath:
+    def __truediv__(self, other: Union[str, PurePath]) -> GSPath:
         return GSPath(self.bucket, self.path / str(other))
 
     def __repr__(self) -> str:
@@ -76,7 +76,7 @@ class GSPath:
     def parent(self) -> GSPath:
         return GSPath(self.bucket, self.path.parent)
 
-    def mkdir(self, mode: int = 0, exist_ok: bool = True, parents: bool = True) -> None:
+    def mkdir(self, mode: int = 0, parents: bool = True, exist_ok: bool = True) -> None:
         # no notion of 'directories' in GS
         pass
 
