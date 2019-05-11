@@ -44,7 +44,6 @@ class BagStore(ObjectStore[PathLike, Bag[T]]):
             self.serializer = cast(Serializer, pickle)
         else:
             self.serializer = serializer
-        self.serializer = cast(Serializer, serializer)
         self.bag_path = bag_path / name
 
     def args2key(self, args: Tuple[Any, ...], kwargs: Dict[str, Any]) -> PathLike:
@@ -68,6 +67,7 @@ class BagStore(ObjectStore[PathLike, Bag[T]]):
         bag.name = new_bag.name
 
         index_path = bag_path / 'index.pickle'
+        index_path.parent.mkdir(parents=True, exist_ok=True)
         with index_path.open('wb') as fil:
             self.serializer.dump((bag.npartitions, type(bag)), fil)
 
@@ -87,13 +87,14 @@ class BagStore(ObjectStore[PathLike, Bag[T]]):
         index_path = bag_path / 'index.pickle'
         with index_path.open('rb') as fil:
             npartitions, bag_type = self.serializer.load(fil)
-        if bag_type == dask.bag.Bag:
-            bag_type = dask.bag
+        bag_constructor: Callable[[Bag[T]], Bag[T]] = (
+            (lambda x: x) if bag_type == dask.bag.Bag else bag_type
+        )
 
-        return cast(Bag[T], bag_type.from_bag(
+        return bag_constructor(
             dask.bag.range(npartitions, npartitions=npartitions)
             .map_partitions(self.make_load_partition(bag_path))
-        ))
+        )
 
     def make_load_partition(
             self, bag_path: PathLike

@@ -204,6 +204,7 @@ class FileStore(MemoryStore):
                 self.serializer.dump(self.data, fil)
         else:
             if self.cache_path.exists():
+                print('deleting ', self.cache_path)
                 self.cache_path.unlink()
 
     def __setitem__(self, key: Hashable, obj: Any) -> None:
@@ -223,7 +224,7 @@ class FileStore(MemoryStore):
 
 
 class DirectoryStore(ObjectStore[PathLike, Any]):
-    '''Stores objects at ./${OBJ_PATH}/${FUNCTION_NAME}/${urlencode(args)}.pickle'''
+    '''Stores objects at ./${CACHE_PATH}/${FUNCTION_NAME}/${urlencode(args)}.pickle'''
 
     def __init__(
             self, object_path: PathLike, name: str,
@@ -236,13 +237,13 @@ class DirectoryStore(ObjectStore[PathLike, Any]):
             self.serializer = cast(Serializer, pickle)
         else:
             self.serializer = serializer
-        self.obj_path = pathify(object_path) / self.name
+        self.cache_path = pathify(object_path) / self.name
 
     def args2key(self, args: Tuple[Any, ...], kwargs: Dict[str, Any]) -> PathLike:
         if kwargs:
             args = args + (kwargs,)
         fname = urllib.parse.quote(f'{safe_str(args)}.pickle', safe='')
-        return self.obj_path / fname
+        return self.cache_path / fname
 
     def __setitem__(self, path: PathLike, obj: Any) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -263,10 +264,11 @@ class DirectoryStore(ObjectStore[PathLike, Any]):
             return False
 
     def clear(self) -> None:
-        if hasattr(self.obj_path, 'rmtree'):
-            cast(Any, self.obj_path).rmtree()
+        print('deleting')
+        if hasattr(self.cache_path, 'rmtree'):
+            cast(Any, self.cache_path).rmtree()
         else:
-            shutil.rmtree(str(self.obj_path))
+            shutil.rmtree(str(self.cache_path))
 
 
 def to_hashable(obj: Any) -> Hashable:
@@ -276,7 +278,12 @@ def to_hashable(obj: Any) -> Hashable:
     except TypeError:
         if hasattr(obj, 'items'):
             # turn dictionaries into frozenset((key, val))
-            return tuple(sorted((key, to_hashable(val))) for key, val in obj.items())
+            # sorting is necessary to make equal dictionaries map to equal things
+            # sorted(..., key=hash)
+            return tuple(sorted(
+                [(keyf, to_hashable(val)) for keyf, val in obj.items()],
+                key=hash
+            ))
         elif hasattr(obj, '__iter__'):
             # turn iterables into tuples
             return tuple(to_hashable(val) for val in obj)
@@ -312,10 +319,10 @@ str does not work because x == y does not imply str(x) == str(y).
     elif isinstance(obj, tuple):
         ret = '(' + ','.join(map(safe_str, obj)) + ')'
     elif isinstance(obj, dict):
-        ret = '{' + ','.join(
+        ret = '{' + ','.join(sorted(
             safe_str(key) + ':' + safe_str(val)
-            for key, val in sorted(obj.items())
-        ) + '}'
+            for key, val in obj.items()
+        )) + '}'
     else:
         raise TypeError()
     return urllib.parse.quote(ret, safe='')
