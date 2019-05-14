@@ -1,7 +1,8 @@
 from typing import TYPE_CHECKING
 from edgar_code.util.time_code import time_code
 from edgar_code.util.list_dict import (
-    merge_dicts, concat_lists, generator2iterator, invert, generator2fn_list
+    merge_dicts, concat_lists, generator2iterator, invert,
+    generator2fn_list, flatten_iter
 )
 
 

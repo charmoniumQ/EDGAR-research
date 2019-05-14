@@ -2,6 +2,7 @@ from typing import (
     List, Iterable, TypeVar, Callable, Optional, Iterator, Dict, Any
 
 )
+import itertools
 import functools
 
 
@@ -68,8 +69,10 @@ def merge_dicts(dicts: Iterable[Dict[T, U]]) -> Dict[T, U]:
         ret.update(dict_)
     return ret
 
+flatten_iter = itertools.chain.from_iterable
+
 
 __all__ = [
     'merge_dicts', 'concat_lists', 'generator2iterator',
-    'invert', 'generator2fn_list',
+    'invert', 'generator2fn_list', 'flatten_iter',
 ]
