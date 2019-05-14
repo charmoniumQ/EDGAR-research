@@ -1,11 +1,17 @@
 from __future__ import annotations
-from typing import Iterable, Union, Dict, Any, IO
+from typing import Iterable, Union, Dict, Any, IO, TYPE_CHECKING
 from pathlib import PurePath, Path
 from urllib.parse import urlparse
 import io
 # https://googleapis.github.io/google-cloud-python/latest/storage/client.html
 from google.cloud.storage import Blob, Bucket, Client
-from edgar_code.types import PathLike
+try:
+    from edgar_code.types import PathLike
+except ImportError:
+    if not TYPE_CHECKING:
+        # this makes this module work ouside of edgar_code package.
+        # I want to use this module in edgar_deploy
+        PathLike = None
 
 
 class GSPath:
@@ -24,7 +30,9 @@ class GSPath:
             raise ValueError('Wrong url scheme')
         return cls(url.netloc, url.path[1:])
 
-    def __init__(self, bucket: Union[str, Bucket], path: Union[PurePath, str]):
+    def __init__(
+            self, bucket: Union[str, Bucket], path: Union[PurePath, str]
+    ) -> None:
         self.path = PurePath(str(path))
         if isinstance(bucket, str):
             bucket = Client().bucket(bucket)
@@ -52,7 +60,9 @@ class GSPath:
     def parent(self) -> GSPath:
         return GSPath(self.bucket, self.path.parent)
 
-    def mkdir(self, mode: int = 0, parents: bool = True, exist_ok: bool = True) -> None:
+    def mkdir(
+            self, mode: int = 0, parents: bool = True, exist_ok: bool = True
+    ) -> None:
         # no notion of 'directories' in GS
         pass
 
