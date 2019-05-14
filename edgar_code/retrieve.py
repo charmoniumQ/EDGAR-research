@@ -1,54 +1,13 @@
 import functools
-from typing import Union, Callable, TypeVar, List, TYPE_CHECKING
+from typing import Union, Callable, TypeVar, List
 import dask.bag
-from dask.bag import Bag as _Bag
 import edgar_code.parse as parse
-import edgar_code.config as config
-from edgar_code.cache import Cache
-from edgar_code.bag_store import BagStore
+import edgar_code.cli.config as config
+from edgar_code.types import Bag, Result
+from edgar_code.parse import Index
 
 
-#### Types ####
-
-# https://stackoverflow.com/a/48554601/1078199
-if TYPE_CHECKING:
-    # we are running in mypy
-    # which understands Bag[T]
-    Bag = _Bag
-else:
-    class FakeGenericMeta(type(_Bag)):
-        def __getitem__(cls, item):
-            return cls
-
-    # I need to make `Bag` subscriptable
-    # subscripting FakeGenericMeta is a no-op
-    # so `Bag[T] is Bag`
-    class Bag(_Bag, metaclass=FakeGenericMeta):
-        pass
-
-T = TypeVar('T')
-U = TypeVar('U')
-Result = Union[T, Exception]
-Index = parse.Index
-
-
-#### Config ####
-
-# This is not a library. This is an application. Hence the S3
-# credentials and cache path are set by the config module.  It is
-# somewhat configurable through edgar_code.config, and modifying the
-# Cache instances directly.
-
-if config.cache:
-    cache_decor = Cache.decor(
-        BagStore.create(config.cache_path / 'bags'), miss_msg=True
-    )
-else:
-    cache_decor = lambda x: x
-
-
-#### Main ####
-
+cache_decor = config.get_cache_decor()
 npartitions = 100
 @cache_decor
 def get_indexes(form_type: str, year: int, qtr: int) -> Bag[Index]:
@@ -101,6 +60,9 @@ def get_rfs(year: int, qtr: int) -> Bag[Result[List[str]]]:
 
 #### Helpers ####
 
+T = TypeVar('T')
+U = TypeVar('U')
+V = TypeVar('V')
 def make_try_func(func: Callable[[T], U]) -> Callable[[Result[T]], Result[U]]:
     @functools.wraps(func)
     def try_func(arg: Union[T, Exception]) -> Union[U, Exception]:

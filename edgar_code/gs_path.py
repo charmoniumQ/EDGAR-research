@@ -3,34 +3,10 @@ from typing import Iterable, Union, Dict, Any, IO
 from pathlib import PurePath, Path
 from urllib.parse import urlparse
 import io
-from typing_extensions import Protocol
 # https://googleapis.github.io/google-cloud-python/latest/storage/client.html
 from google.cloud.storage import Blob, Bucket, Client
+from edgar_code.types import PathLike
 
-
-#### Types ####
-
-class PathLike(Protocol):
-    # pylint: disable=no-self-use,unused-argument
-    def __truediv__(self, other: Union[str, PurePath]) -> PathLike:
-        ...
-    def mkdir(self, mode: int = 0, parents: bool = False, exist_ok: bool = False) -> None:
-        ...
-    def exists(self) -> bool:
-        ...
-    def unlink(self) -> None:
-        ...
-    def iterdir(self) -> Iterable[PathLike]:
-        ...
-    # pylint: disable=too-many-arguments
-    def open(self, mode: str = 'r') -> IO[Any]:
-        ...
-    @property
-    def parent(self) -> PathLike:
-        ...
-
-
-#### Main ####
 
 class GSPath:
     path: PurePath

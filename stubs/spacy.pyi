@@ -19,6 +19,7 @@ class Doc:
 class Span:
     def __iter__(self) -> Iterator[Token]:
         ...
+    label_: str
 
 class Token:
     lemma_: str

@@ -22,7 +22,7 @@ class Client:
     def map(self, func: Callable[[T], U], lst: Iterable[T]) -> List[Future[U]]:
         ...
 
-    def compute(self, obj: Bag[T], sync: bool = ...) -> Union[List[T], Future[List[T]]]:
+    def compute(self, obj: Any, sync: bool = ...) -> Any:
         ...
 
     def upload_file(self, path: str) -> None:

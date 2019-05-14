@@ -14,9 +14,6 @@ import collections
 import psutil
 
 
-FunctionType = TypeVar('FunctionType', bound=Callable[..., Any])
-
-
 class _TimeCodeData(threading.local):
     stack: List[str]
 
@@ -27,6 +24,7 @@ class _TimeCodeData(threading.local):
         else:
             self.stack = ['Thread ' + threading.current_thread().name]
 
+FunctionType = TypeVar('FunctionType', bound=Callable[..., Any])
 class _TimeCode:
     def __init__(self) -> None:
         self.data = _TimeCodeData()
@@ -46,7 +44,8 @@ class _TimeCode:
 
     @contextlib.contextmanager
     def ctx(
-            self, name: str, print_start: bool = True, print_time: bool = True, run_gc: bool = False,
+            self, name: str, print_start: bool = True, print_time: bool = True,
+            run_gc: bool = False,
     ) -> Generator[None, None, None]:
         '''Context that prints the wall-time taken to run the code inside.
 
@@ -65,15 +64,16 @@ class _TimeCode:
 You can also access time_code.stats for a dict of qualified_names
 to time-deltas describing the duration of the code.
 
-It is like line- or function-profiling, but sometimes that is too
-verbose, and you really only want start/end times for the hefty part
-of your code. Perhaps this is useful to let the user know what you are
-doing and why it takes long. It also does not affect performance as
-much as general profiling. It also does not need access to the
-__file__, so it will work from .eggs (unlike memory_profiler and
-line_profiler).
+It is like function-profiling, but:
+- Less verbose
+- Lets you select what gets profiled and reported
+- Less performance overhead
+- Reported to the user (to let them know what the code is doing right now)
+- Programmably accessible starting and results
+- Does not need source-code access, so it will work from .eggs
 
         '''
+
         self.data.stack.append(name)
         qualified_name_str = ' > '.join(self.data.stack)
         if print_start:
@@ -117,21 +117,14 @@ line_profiler).
         if exc:
             raise exc
 
-    def time_exec_func(
-            self, func: FunctionType,
-            print_start: bool = True, print_time: bool = True, run_gc: bool = False,
-            *args: Any, **kwargs: Any,
-    ) -> Any:
-        with self.ctx(func.__qualname__, print_start, print_time, run_gc):
-            return func(*args, **kwargs)
-
     def make_timed_func(
             self, func: FunctionType,
             print_start: bool = True, print_time: bool = True, run_gc: bool = False,
     ) -> FunctionType:
         @functools.wraps(func)
         def timed_func(*args: Any, **kwargs: Any) -> Any:
-            self.time_exec_func(func, print_start, print_time, run_gc, *args, **kwargs)
+            with self.ctx(func.__qualname__, print_start, print_time, run_gc):
+                return func(*args, **kwargs)
         return cast(FunctionType, timed_func)
 
     def decor(
@@ -212,7 +205,10 @@ def mem2str(n_bytes: float, base2: bool = True, round_up: bool = False) -> Tuple
     rounder = cast(Callable[[float], float], round) if round_up else math.floor
     unit_map: List[str] = ['b', 'Kb', 'Mb', 'Gb', 'Tb']
     base = 1024 if base2 else 1000
-    unit_int = min([len(unit_map) - 1, int(rounder(math.log(math.fabs(n_bytes), base)))]) if n_bytes != 0 else 0
+    unit_int = min([
+        len(unit_map) - 1,
+        int(rounder(math.log(math.fabs(n_bytes), base)))
+    ]) if n_bytes != 0 else 0
     unit_div = base**unit_int
     return n_bytes / unit_div, unit_map[unit_int], unit_div
 

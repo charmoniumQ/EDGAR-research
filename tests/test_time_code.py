@@ -72,10 +72,10 @@ def test_time_code() -> None:
             future.result()
 
     expected_stats = dict(stats)
-    actual_stats =  time_code.get_stats()
+    actual_stats = time_code.get_stats()
     for key in actual_stats.keys() | expected_stats.keys():
         expected_val = expected_stats[key][0]
-        for actual_time_val, actual_mem_val in actual_stats[key]:
+        for actual_time_val, _ in actual_stats[key]:
             assert math.fabs(expected_val - actual_time_val) < 0.04, \
                 (key, expected_val, actual_stats[key])
             # memory is really inconsistent

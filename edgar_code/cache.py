@@ -3,48 +3,15 @@ import abc
 import shutil
 import functools
 import threading
-from collections import UserDict as _UserDict
 from pathlib import Path
 import urllib.parse
 from typing import (
     Callable, Any, TypeVar, cast, Tuple, Dict, Optional,
-    Union, IO, Hashable, TYPE_CHECKING
+    Union, Hashable
 )
 import logging
-from typing_extensions import Protocol
-from edgar_code.gs_path import PathLike
+from edgar_code.types import PathLike, Serializer, UserDict
 
-#### Logging ####
-logging.basicConfig(level=logging.INFO)
-
-
-#### Types ####
-
-# https://stackoverflow.com/a/48554601/1078199
-if TYPE_CHECKING:
-    # we are running in mypy
-    # which understands UserDict[int, str]
-    UserDict = _UserDict
-else:
-    class FakeGenericMeta(type(_UserDict)):
-        def __getitem__(cls, item):
-            return cls
-
-    # I need to make `UserDict` subscriptable
-    # subscripting FakeGenericMeta is a no-op
-    # so `UserDict[int, str] is UserDict`
-    class UserDict(_UserDict, metaclass=FakeGenericMeta):
-        pass
-
-class Serializer(Protocol):
-    # pylint: disable=unused-argument,no-self-use
-    def load(self, fil: IO[bytes]) -> Any:
-        ...
-    def dump(self, obj: Any, fil: IO[bytes]) -> None:
-        ...
-
-
-#### Main ####
 
 CacheKey = TypeVar('CacheKey')
 CacheReturn = TypeVar('CacheReturn')
