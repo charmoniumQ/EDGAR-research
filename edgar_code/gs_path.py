@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Iterable, Union, Dict, Any, IO, TYPE_CHECKING
 from pathlib import PurePath, Path
+import shutil
 from urllib.parse import urlparse
 import io
 # https://googleapis.github.io/google-cloud-python/latest/storage/client.html
@@ -102,6 +103,9 @@ class GSPath:
         else:
             raise RuntimeError(f'Flag {mode} not supported')
 
+    def public_path(self) -> str:
+        return f'https://storage.googleapis.com/{self.bucket.name}/{self.path}'
+
 
 class WGSFile(io.BytesIO):
     def __init__(self, gs_path: GSPath, _: str) -> None:
@@ -127,7 +131,7 @@ def pathify(path: Union[str, PathLike]) -> PathLike:
         raise TypeError()
 
 
-def copy(in_path: PathLike, out_path: PathLike) -> None:
-    with pathify(in_path).open('rb') as fin:
-        with pathify(out_path).open('wb') as fout:
-            fout.write(fin.read())
+def copy(src_path: PathLike, dst_path: PathLike) -> None:
+    with pathify(src_path).open('rb') as src_file:
+        with pathify(dst_path).open('wb') as dst_file:
+            shutil.copyfileobj(src_file, dst_file)

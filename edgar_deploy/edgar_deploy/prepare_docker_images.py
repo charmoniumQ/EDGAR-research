@@ -3,8 +3,9 @@ import subprocess
 import itertools
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from . import utils
+from .time_code import time_code
 from .config import config
+from . import utils
 
 
 def prepare_docker_images(cache_dir=None):
@@ -12,7 +13,17 @@ def prepare_docker_images(cache_dir=None):
         ['gcloud', '--quiet', 'auth', 'configure-docker'],
         capture_output=True
     )
-    dockerfolders = list((config.package_dir / 'dockerfiles').iterdir())
+
+    prepare_docker_image_cached(
+        config.deploy_dir / 'dockerfiles/common',
+        cache_dir, push=False, tag='common',
+    )
+
+    dockerfolders = [
+        folder for folder in (config.deploy_dir / 'dockerfiles').iterdir()
+        if folder.name != 'common'
+    ]
+
     executor = ThreadPoolExecutor(max_workers=len(dockerfolders))
     compiled_images = {
         dockerfolder.name: executor.submit(
@@ -23,34 +34,33 @@ def prepare_docker_images(cache_dir=None):
     return compiled_images
 
 
-def prepare_docker_image(dockerfolder):
+def prepare_docker_image(dockerfolder, push, tag):
     name = dockerfolder.name
     version = utils.rand_name(20, lowercase=True, digits=True)
-    tag = f'gcr.io/{config.gcloud.project}/{name}:{version}'
+    if tag is None:
+        tag = f'gcr.io/{config.gcloud.project}/{name}:{version}'
 
-    with utils.time_code(f'docker build/push {name}'):
+    with time_code.ctx(f'docker build/push {name}'):
         client = docker.from_env()
 
-        output = client.images.build(
+        client.images.build(
             path=str(dockerfolder),
             tag=tag,
             quiet=True,
             nocache=False,
             rm=True, # should this be False?
             # TODO: does this need cache_from=[tag]
-        )[-1]
+        )
 
-        # TODO; get intermediate output
-        # for line in output:
-        #     print(line)
-
-        client.images.push(tag)
+        if push:
+            logging.info(f'pushing {tag}')
+            client.images.push(tag)
 
         return tag
 
 
 from .modtime import modtime, modtime_recursive
-def prepare_docker_image_cached(dockerfolder, cache_dir):
+def prepare_docker_image_cached(dockerfolder, cache_dir, push=True, tag=None):
     name = dockerfolder.name
 
     if cache_dir is not None:
@@ -65,11 +75,11 @@ def prepare_docker_image_cached(dockerfolder, cache_dir):
     else:
         cache_file = None
 
-    tag = prepare_docker_image(dockerfolder)
+    tag = prepare_docker_image(dockerfolder, push, tag)
 
     if cache_file is not None:
         cache_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(cache_file, 'w') as f:
-            f.write(tag)
+        with open(cache_file, 'w') as fil:
+            fil.write(tag)
 
     return tag

@@ -6,3 +6,4 @@ google-cloud-storage
 kubernetes
 docker
 setuptools
+psutil

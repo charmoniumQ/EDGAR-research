@@ -11,11 +11,12 @@ class Config(object):
     # I am justified in hardcoding instance variables, because this
     # could be replaced with a dynamic property.
     def __init__(self):
-        self.package_dir = Path(__loader__.path).parent.relative_to(Path.cwd())
-        self.project_dir = self.package_dir.parent
+        self.package_dir = Path(__loader__.path).parent
+        self.deploy_dir = self.package_dir.parent
+        self.project_dir = self.deploy_dir.parent
 
-        with open(self.package_dir / 'config.yaml', 'r') as f:
-            config = yaml.load(f)
+        with open(self.deploy_dir / 'config.yaml', 'r') as f:
+            config = yaml.load(f, Loader=yaml.SafeLoader)
 
         self.name = config['name']
 
@@ -23,7 +24,7 @@ class Config(object):
         self.gcloud.project = config['gcloud']['project']
         self.gcloud.region = config['gcloud']['region']
         self.gcloud.fq_zone = f"{config['gcloud']['region']}-{config['gcloud']['zone']}"
-        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = str(self.package_dir / config['gcloud']['service_account_file'])
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = str(self.deploy_dir / config['gcloud']['service_account_file'])
 
         self.run_name = Haikunator.haikunate(0)
 
@@ -35,7 +36,7 @@ class Config(object):
         # called, which happens when the program exits.
         self.scratch_dir = Path(self._scratch_dir.name)
 
-        self.cache_dir = Path(self.project_dir / 'cache')
+        self.cache_dir = Path(self.deploy_dir / 'cache')
 
 
 config = Config()

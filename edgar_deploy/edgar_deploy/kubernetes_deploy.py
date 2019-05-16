@@ -1,11 +1,10 @@
-from .config import config
-import logging
 import os
 import base64
 import contextlib
 # https://github.com/kubernetes-client/python/blob/master/kubernetes/README.md
 import kubernetes
-from . import utils
+from .config import config
+from .time_code import time_code
 
 
 @contextlib.contextmanager
@@ -29,8 +28,8 @@ def kubernetes_namespace(kube_api, namespace):
         )
 
 
-@utils.time_code_decor(print_start=False)
-def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_bucket, run_module):
+@time_code.decor(print_start=False)
+def setup_kubernetes(kube_api, namespace, n_workers, images, public_egg_path, run_module):
     ports = {
         'scheduler': 8786,
         'dashboard': 8787,
@@ -53,7 +52,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
         kubernetes.client.V1Secret(
             metadata=kubernetes.client.V1ObjectMeta(
                 name='service-account',
-            ),                
+            ),
             data={
                 'key.json': service_account_data,
             },
@@ -76,19 +75,13 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
             value=value,
         ) for name, value in {
             'GOOGLE_APPLICATION_CREDENTIALS': f'{secret_volume_mount.mount_path}/key.json',
-            'gcloud_project': config.gcloud.project,
-            'google_storage_bucket': google_storage_bucket,
-            'n_workers': str(n_workers),
-            'dask_scheduler_address': f'tcp://scheduler:{ports["scheduler"]}',
-            'run_name': config.run_name,
-            'run_module': run_module,
-            'namespace': namespace,
-            'PYRO_SERIALIZERS_ACCEPTED': 'pickle',
-            'PYRO_SERIALIZER': 'pickle',
-            'PYRO_LOGLEVEL': 'DEBUG',
-            'PYRO_THREADPOOL_SIZE': str(80),
-            'pyro_ns_host': 'scheduler',
-            'pyro_ns_port': str(ports["nameserver"]),
+            'N_WORKERS': str(n_workers),
+            'DEPLOY_EGG': public_egg_path,
+            'RUN_MODULE': run_module,
+            # 'PYRO_SERIALIZERS_ACCEPTED': 'pickle',
+            # 'PYRO_SERIALIZER': 'pickle',
+            # 'PYRO_LOGLEVEL': 'DEBUG',
+            # 'PYRO_THREADPOOL_SIZE': '80',
         }.items()
     ]
 
@@ -120,13 +113,14 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                                 name='scheduler',
                                 image=images['scheduler'].result(),
                                 ports=[
-                                    kubernetes.client.V1ContainerPort(container_port=port, name=name)
+                                    kubernetes.client.V1ContainerPort(
+                                        container_port=port, name=name
+                                    )
                                     for name, port in ports.items()
                                 ],
                                 command=[
                                     '/bin/sh', '-c',
-                                    # f'python3 -m Pyro4.naming --host=0.0.0.0 --port=${{pyro_ns_port}} & ' +
-                                    f'unbuffer dask-scheduler --debug --port {ports["scheduler"]} | unbuffer -p /app/update_status.py',
+                                    'dask-scheduler --port ${SCHEDULER_SERVICE_PORT}'
                                 ],
                                 volume_mounts=[secret_volume_mount],
                                 env=env_vars,
@@ -149,7 +143,9 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                 selector={'deployment': 'scheduler'},
                 type='ClusterIP',
                 ports=[
-                    kubernetes.client.V1ServicePort(port=port, target_port=name, name=name)
+                    kubernetes.client.V1ServicePort(
+                        port=port, target_port=name, name=name
+                    )
                     for name, port in ports.items()
                 ],
             ),
@@ -181,11 +177,8 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                                 image=images['worker'].result(),
                                 command=[
                                     '/bin/sh', '-c',
-                                    # f'(sleep 60 ; python3 -m gensim.models.lsi_worker --host ${{pyro_ns_host}} --port ${{pyro_ns_port}}) & ' +
-                                    f'dask-worker ${{dask_scheduler_address}}',
+                                    'dask-worker ${SCHEDULER_PORT}',
                                     # --memory-limit {int(memory * 1024 * 0.95)}
-                                    # TODO: nprocs
-                                    # TODO: nthreads
                                 ],
                                 volume_mounts=[secret_volume_mount],
                                 env=env_vars,
@@ -223,9 +216,13 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, google_storage_buck
                                 image=images['job'].result(),
                                 command=[
                                     '/bin/sh', '-c',
-                                    f'/work/wait_for_scheduler.py && cd /work && (' +
-                                    # f'python3 -m gensim.models.lsi_dispatcher 64 --host ${{pyro_ns_host}} --port ${{pyro_ns_port}} & ' +
-                                    f'/work/runner.py)',
+                                    # can this deploy from an GS path?
+                                    ' && '.join([
+                                        'python3 -m easy_install ${DEPLOY_EGG}',
+                                        'python3 --version',
+                                        'pip3 --version',
+                                        'python3 -m ${RUN_MODULE}',
+                                    ])
                                 ],
                                 volume_mounts=[secret_volume_mount],
                                 env=env_vars,
