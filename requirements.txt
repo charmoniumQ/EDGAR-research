@@ -1,4 +1,5 @@
 typing_extensions
+psutil
 dask[bag]
 distributed
 google-cloud-storage

@@ -1,11 +1,15 @@
 from typing import List, Dict, NamedTuple, Iterable, Iterator
 import html as pyhtml
 import io
+import logging
 import datetime
 import zipfile
 import re
 import chardet
 from edgar_code.util import download_retry
+
+
+logger = logging.getLogger(__name__)
 
 
 class Index(NamedTuple):
@@ -118,16 +122,23 @@ def split(line_bytes: bytes) -> List[str]:
     # 'a|b|c' -> ['a', 'b', 'c']
     elems = [elem.strip() for elem in line.split('|')]
 
-    # too many elements, elems[2] should be part of elems[1]
+    # too many elements.this happens when a company name has more
+    # than two spaces in it, such as:
+
+    # blah     SILVER DINER DEVELOPMENT INC  /MD/     blah
+
+    # elems[2] should be part of elems[1]. I am also doing
+    # verification that CIK is an integer, dates is a %Y-%M-%D, and
+    # URL is a URL, so I would notice if this assumption is incorrect.
     while len(elems) > 5:
         elems[1] += ' ' + elems[2]
         del elems[2]
-        raise ParseError('too many elements')
 
     # too few elements, empty field present
     if len(elems) < 5:
-        elems.insert(1, '')
-        raise ParseError('too few elements')
+        raise ParseError(f'too few elements in {elems!r}')
+        # elems.insert(1, '')
+        # raise ParseError('too few elements')
 
     return elems
 
@@ -138,12 +149,13 @@ def download_indexes(form_type: str, year: int, qtr: int) -> Iterable[Index]:
     indexes = parse_body(year, qtr, lines, col_names)
     for index in filter_form_type(indexes, form_type):
         assert index.form_type == form_type
-        assert len(index.company_name) > 4
-        assert index.cik > 1000
+        if not len(index.company_name) > 2:
+            logger.info(index.company_name)
+        assert index.cik > 1000 or index.cik == 20
         assert (
-            datetime.date(year, 1, 1) + datetime.timedelta(days=(qtr-1) * 3 * 31)
+            datetime.date(year, 1, 1) + datetime.timedelta(days=(qtr-1) * 3 * 29)
             < index.date_filed <
-            datetime.date(year, 1, 1) + datetime.timedelta(days=(qtr-0) * 3 * 31)
+            datetime.date(year, 1, 1) + datetime.timedelta(days=(qtr-0) * 3 * 30.5)
         )
         assert str(index.cik) in index.url
         assert index.year == year
@@ -248,6 +260,15 @@ def text2paragraphs(btext: bytes) -> List[str]:
     text = re.sub(r'\<TABLE\>.*?\</TABLE\>', '', text)
     text = re.sub(r'^\s*PAGE.*$', '\n', text)
 
+    # this deals with hyphenated horizontal lines
+    # https://www.sec.gov/Archives/edgar/data/100331/0000100331-95-000014.txt
+    # however, I would like to keep hyphenated words
+    text = re.sub('-{2,}', '', text)
+
+    # other form of horizontal rule
+    # see https://www.sec.gov/Archives/edgar/data/717014/0000898430-95-000402.txt
+    text = text.replace('_', ' ')
+
     # change windows-newline to linux-newline
     # before we do word-wrap/paragraphs
     text = text.replace('\r\n', '\n')
@@ -258,12 +279,21 @@ def text2paragraphs(btext: bytes) -> List[str]:
     if '\r' in text:
         raise ValueError('tell sam to remove carriage returns')
 
+
     # save paragraph breaks
-    text = re.sub('\n{2,}', '<br />', text)
+    text = re.sub('\n\\s*\n', '<br />', text)
+    # note that this doc
+    # [https://www.sec.gov/Archives/edgar/data/783233/0000927550-95-000015.txt]
+    # has space in between the newlines >:(
+
+    # eliminate hyphenated line-continuations
+    text = text.replace('-\n', '')
     # eliminate word wrap
     text = text.replace('\n', ' ')
     # restore paragraph breaks
-    return text.split('<br />')
+    lines = text.split('<br />')
+
+    return lines
 
 
 def is_text_line(line: str) -> bool:
@@ -315,24 +345,24 @@ def remove_header(paragraphs: List[str]) -> List[str]:
     # table of contents starts with "Part I"
     # body starts with "Part I"
 
-    # ====== trim header ====
-    # note that the [\\. \n] is necessary otherwise the regex will match
-    # "part ii"
     # note that the begining of line anchor is necessary because we don't want
     # it to match "part i" in the middle of a paragraph
-    parti_pattern = re.compile('part i.?', re.IGNORECASE)
+    parti_pattern = re.compile(r'^part i\.?$', re.IGNORECASE)
     partis = [
         i for i, paragraph in enumerate(paragraphs)
         if parti_pattern.match(paragraph)
     ]
-    if not partis:
-        raise ParseError('Could not find "Part I" to remove header')
+    if len(partis) == 0: # pylint: disable=len-as-condition
+        return paragraphs
     elif len(partis) == 1:
         return paragraphs[partis[0]:]
     elif len(partis) == 2:
         return paragraphs[partis[1]:]
     else:
-        raise ParseError('Found too many "Part I"s to remove')
+        raise ParseError(
+            'Found too many "Part I"s to remove:\n'
+            + '\n'.join(paragraphs[parti][:10] for parti in partis)
+        )
 
 
 def paragraphs2rf(
@@ -340,33 +370,45 @@ def paragraphs2rf(
         pre_2006: bool,
 ) -> List[str]:
     if pre_2006:
+        # see https://www.sec.gov/Archives/edgar/data/783425/0000950124-95-000841.txt
+        # which has "management's discussion" but no "item 7." (erroneously)
         start_pattern = re.compile(
-            'item 7.? ?(management\'s discussion and '
-            'analysis of financial condition and results of operations)$',
+            'item 7.? ?(management\'s discussion)?',
             re.IGNORECASE
         )
         stop_pattern = re.compile(
-            'item 8.? ?(financial statements and '
-            'supplementary data)?$',
+            'item 8.? ?(financial statements)?',
             re.IGNORECASE
         )
     else:
         start_pattern = re.compile('^item 1a.? ?(risk factors.*)?$', re.IGNORECASE)
         stop_pattern = re.compile('^item 2.? ?(properties.*)?$', re.IGNORECASE)
-    start = [
+    starts = [
         i for i, paragraph in enumerate(paragraphs)
         if start_pattern.match(paragraph)
     ]
-    stop = [
+    stops = [
         i for i, paragraph in enumerate(paragraphs)
         if stop_pattern.match(paragraph)
     ]
-    if len(start) != 1:
-        raise ParseError(f'got {len(start)} starts')
-    if len(stop) != 1:
-        raise ParseError(f'got {len(stop)} stops')
+    if len(starts) != 1:
+        start_texts = [paragraphs[start][:20] for start in starts]
+        raise ParseError(
+            f'got {len(starts)} starts:\n'
+            + '\n'.join(paragraph for paragraph in paragraphs
+                        if 'item 7' in paragraph.lower() or 'item 1a' in paragraph.lower()
+            )
+        )
+    if len(stops) != 1:
+        stop_texts = [paragraphs[stop][:20] for stop in stops]
+        raise ParseError(
+            f'got {len(stops)} stops:\n'
+            + '\n'.join(paragraph for paragraph in paragraphs
+                        if 'item 8' in paragraph.lower() or 'item 2' in paragraph.lower()
+            )
+        )
     else:
-        return paragraphs[start[0]+1:stop[0]]
+        return paragraphs[starts[0]+1:stops[0]]
 
 
 class ParseError(Exception):

@@ -1,17 +1,17 @@
-from typing import Union, List, Tuple, Callable, Generator, cast
+from typing import Union, List, Tuple, Callable, Generator, TypeVar, cast
 import tempfile
 import contextlib
 import csv
 from pathlib import Path
 import matplotlib.pyplot as plt
 import dask.bag
-from distributed import Future
 import numpy as np
 import edgar_code.cli.config as config
+logger = logging.getLogger(__name__)
 from edgar_code.gs_path import copy
 from edgar_code.util import time_code
 from edgar_code.retrieve import get_rfs, get_indexes
-from edgar_code.types import PathLike, Bag
+from edgar_code.types import PathLike, Bag, Future
 
 
 # TODO: combine with retrieve.py
@@ -26,6 +26,12 @@ def rf_mapper(rf: Union[List[str], Exception]) -> Tuple[int, int, str]:
         )
     else:
         return (-1, -1, repr(rf))
+
+T = TypeVar('T')
+
+def time_code_getter(val: T) -> T:
+    print(time_code.format_stats())
+    return val
 
 def get_bag(year: int, qtr: int) -> Bag[Tuple[str, int, int, str]]:
     return dask.bag.map(
@@ -51,14 +57,13 @@ def get_styled_ax(path: PathLike) -> Generator[plt.Axes, None, None]:
 def main() -> None:
     client = config.get_client()
 
-    # submiting all bags for computation at once loads the cluster
-    # more efficiently. Workers don't have to idle in between bags
-    # being submitted; there is always more work available.
+    # This comment is commented out
+    # # submiting all bags for computation at once loads the cluster
+    # # more efficiently. Workers don't have to idle in between bags
+    # # being submitted; there is always more work available.
+
     future_bags = [
-        ((year, qtr), cast(
-            Future[List[Tuple[str, int, int, str]]],
-            client.compute(get_bag(year, qtr), sync=False))
-         )
+        ((year, qtr), get_bag(year, qtr).compute())
         for year in range(1993, 2019)
         for qtr in range(1, 5)
     ]
@@ -70,12 +75,14 @@ def main() -> None:
         for (year, qtr), future_bag in future_bags:
             quarter_dir = config.results_path / 'get_all_rfs/{year}_{qtr}/'
 
-            # I am calling .result instead of gather because the whole
-            # thing might not fit in RAM on the workers.  When I consume
-            # one result, it frees up that memory, so they can compute the
-            # next one. It also is less memory intensive on this pod.
+            # This is also commented out
+            # # I am calling .result instead of gather because the whole
+            # # thing might not fit in RAM on the workers.  When I consume
+            # # one result, it frees up that memory, so they can compute the
+            # # next one. It also is less memory intensive on this pod.
             with time_code.ctx(f'fetching get_rfs({year}, {qtr})'):
-                bag = future_bag.result()
+                # bag = future_bag.result(timeout=None)
+                bag = future_bag
 
             with time_code.ctx(f'write for {year} {qtr}'):
                 urls, chars, paragraphs, texts = (

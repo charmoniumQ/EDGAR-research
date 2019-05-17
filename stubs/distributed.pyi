@@ -27,3 +27,6 @@ class Client:
 
     def upload_file(self, path: str) -> None:
         ...
+
+    def wait_for_workers(self, n_workers: int) -> None:
+        ...

@@ -3,7 +3,9 @@ import edgar_code.parse as parse
 
 
 # fields can be in a different order.
-# fields can be dilimited by spaces or pipes
+# fields can be dilimited by spaces or pipes.
+# note that there is an instance where company names have an extraneous double-space.
+# Ex. "SILVER DINER DEVELOPMENT INC  /MD/"
 # see https://www.sec.gov/Archives/edgar/full-index/2016/QTR1/master.idx
 
 def test_parse_index1() -> None:
@@ -20,7 +22,8 @@ Anonymous FTP:         ftp://ftp.sec.gov/edgar/
 Form Type   Company Name                                                  CIK         Date Filed  File Name
 ---------------------------------------------------------------------------------------------------------------------------------------------
 10-12B      COMPREHENSIVE CARE CORP                                       22872       1995-01-13  edgar/data/22872/0000022872-95-000004.txt           
-10-12B/A    COMPUTER SCIENCES CORP                                        23082       1995-02-07  edgar/data/23082/0000912057-95-000343.txt           '''),
+10-12B/A    COMPUTER SCIENCES CORP                                        23082       1995-02-07  edgar/data/23082/0000912057-95-000343.txt           
+10-C        SILVER DINER DEVELOPMENT INC  /MD/                            923134      1996-06-21  edgar/data/923134/0000950169-96-000185.txt          '''),
         (2016, 1, b'''Description:           Master Index of EDGAR Dissemination Feed
 Last Data Received:    March 31, 2016
 Comments:              webmaster@sec.gov
@@ -179,6 +182,13 @@ McDonald's Corporation, the registrant, together with its subsidiaries, is
 referred to herein as the "Company".
 
                                                9
+
+The total number of pages in this Report is ___.
+                                
+                                PART I
+
+Item 1.   BUSINESS.
+
 '''
     expected_paragraph_starts = [
         'UNITED STATES',
@@ -191,6 +201,9 @@ referred to herein as the "Company".
         'Item 1.  Business',
         'McDonald\'s Corporation, the registrant, together with its subsidiaries, is referred',
         '9',
+        'The total number of pages in this Report is ___.',
+        'PART I',
+        'Item 1.   BUSINESS.',
     ]
 
     paragraphs = parse.text2paragraphs(text1)

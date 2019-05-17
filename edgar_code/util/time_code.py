@@ -14,6 +14,9 @@ import collections
 import psutil
 
 
+logger = logging.getLogger(__name__)
+
+
 class _TimeCodeData(threading.local):
     stack: List[str]
 
@@ -77,7 +80,7 @@ It is like function-profiling, but:
         self.data.stack.append(name)
         qualified_name_str = ' > '.join(self.data.stack)
         if print_start:
-            logging.info('%s: running', qualified_name_str)
+            logger.debug('%s: running', qualified_name_str)
         exc: Optional[Exception] = None
         process = psutil.Process(os.getpid())
         time_start = datetime.datetime.now()
@@ -105,7 +108,7 @@ It is like function-profiling, but:
             self.data.stack.pop()
             if print_time:
                 mem_val, mem_unit, _ = mem2str(mem_leaked)
-                logging.info(
+                logger.debug(
                     '%s: %.1fs %.1f%s (gc: %.1fs) %s',
                     qualified_name_str,
                     duration,
@@ -163,7 +166,7 @@ It is like function-profiling, but:
         }
 
         keys = sorted(stats.keys())
-        key_field_length = max(len(' > '.join(key)) for key in keys)
+        key_field_length = max(len(' > '.join(key)) for key in keys) if keys else 0
 
         lines: List[str] = []
 
@@ -181,25 +184,32 @@ It is like function-profiling, but:
             parent = key[:-1]
             if parent in stats:
                 parent_total_time_m = stats[parent][1]
-                percent_parent = cumulative_time_m / parent_total_time_m
+                percent_parent = cumulative_time_m / parent_total_time_m * 100
             else:
-                percent_parent = 1
+                percent_parent = 100
 
             total = key[:2]
             total_time_m = stats[total][1]
-            percent_total = cumulative_time_m / total_time_m
+            percent_total = cumulative_time_m / total_time_m * 100
 
             lines.append(' = '.join([
                 f'{key_str:{key_field_length}s}',
-                f'{percent_total:4.0f}% of total',
-                f'{percent_parent:4.0f}% of parent',
+                f'{percent_total:2.0f}% of total',
+                f'{percent_parent:2.0f}% of parent',
                 f'({cumulative_time_m:.2f} +/- {cumulative_time_s:.2f}) sec',
                 f'{n_calls} ({percall_time_m:.2f} +/- {percall_time_s:.2f}) sec',
-            ]) + f'({mem_m:.1f} +/- {mem_s:.1f}) {mem_unit}')
+            ]) + f'  ({mem_m:.1f} +/- {mem_s:.1f}) {mem_unit}')
 
         return '\n'.join(lines)
 
-ret: Tuple[float, str] = (3.0, '3.0')
+    def print_stats(self) -> None:
+        print(self.format_stats())
+
+    def add_stats(self, other_stats: Dict[Tuple[str, ...], List[Tuple[float, int]]]):
+        with self.lock:
+            for key, times in other_stats.items():
+                self.stats[key].extend(times)
+
 
 def mem2str(n_bytes: float, base2: bool = True, round_up: bool = False) -> Tuple[float, str, float]:
     rounder = cast(Callable[[float], float], round) if round_up else math.floor
@@ -216,8 +226,11 @@ def mean(lst: List[float]) -> float:
     return sum(lst) / len(lst)
 
 def std(lst: List[float]) -> float:
-    m = mean(lst)
-    return math.sqrt(sum((x - m)**2 for x in lst) / (len(lst) - 1))
+    if len(lst) != 1:
+        m = mean(lst)
+        return math.sqrt(sum((x - m)**2 for x in lst) / (len(lst) - 1))
+    else:
+        return 0
 
 
 time_code = _TimeCode()

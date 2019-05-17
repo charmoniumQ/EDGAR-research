@@ -5,23 +5,26 @@ import edgar_code.parse as parse
 import edgar_code.cli.config as config
 from edgar_code.types import Bag, Result
 from edgar_code.parse import Index
+from edgar_code.util.time_code import time_code
 
 
-cache_decor = config.get_cache_decor()
 npartitions = 100
-@cache_decor
+@config.cache_decor
+@time_code.decor(print_start=False, print_time=False)
 def get_indexes(form_type: str, year: int, qtr: int) -> Bag[Index]:
     return dask.bag.from_sequence(
         parse.download_indexes(form_type, year, qtr),
         npartitions=npartitions)
 
 
-@cache_decor
+@config.cache_decor
 def get_raw_forms(form_type: str, year: int, qtr: int) -> Bag[Result[bytes]]:
     def get_raw_forms_f(index: Index) -> bytes:
-        sgml = parse.download_retry(index.url)
-        fileinfos = parse.sgml2fileinfos(sgml)
-        raw_form = parse.find_form(fileinfos, form_type)
+        with time_code.ctx('download sgml', print_start=False, print_time=False):
+            sgml = parse.download_retry(index.url)
+        with time_code.ctx('parse sgml', print_start=False, print_time=False):
+            fileinfos = parse.sgml2fileinfos(sgml)
+            raw_form = parse.find_form(fileinfos, form_type)
         return raw_form
 
     return (
@@ -30,8 +33,9 @@ def get_raw_forms(form_type: str, year: int, qtr: int) -> Bag[Result[bytes]]:
     )
 
 
-@cache_decor
+@config.cache_decor
 def get_paragraphs(form_type: str, year: int, qtr: int) -> Bag[Result[List[str]]]:
+    @time_code.decor(print_start=False, print_time=False)
     def get_main_texts_f(raw_form: bytes) -> List[str]:
         if parse.is_html(raw_form):
             raw_text = parse.html2paragraphs(raw_form)
@@ -50,11 +54,13 @@ def get_paragraphs(form_type: str, year: int, qtr: int) -> Bag[Result[List[str]]
     )
 
 
-@cache_decor
+@config.cache_decor
 def get_rfs(year: int, qtr: int) -> Bag[Result[List[str]]]:
+    def paragraphs2rf(paragraphs: List[str]) -> List[str]:
+        return parse.paragraphs2rf(paragraphs, year < 2006)
     return (
         get_paragraphs('10-K', year, qtr)
-        .map(make_try_func(lambda para: parse.paragraphs2rf(para, year >= 2006)))
+        .map(make_try_func(paragraphs2rf))
     )
 
 

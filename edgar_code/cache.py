@@ -13,6 +13,9 @@ import logging
 from edgar_code.types import PathLike, Serializer, UserDict
 
 
+logger = logging.getLogger(__name__)
+
+
 CacheKey = TypeVar('CacheKey')
 CacheReturn = TypeVar('CacheReturn')
 CacheFunc = TypeVar('CacheFunc', bound=Callable[..., Any])
@@ -80,13 +83,13 @@ class Cache:
                 args_key = self.obj_store.args2key(pos_args, kwargs)
                 if args_key in self.obj_store:
                     if self.hit_msg:
-                        logging.info('hit %s with %s, %s',
-                                     self.name, pos_args, kwargs)
+                        logger.info('hit %s with %s, %s',
+                                    self.name, pos_args, kwargs)
                     res = self.obj_store[args_key]
                 else:
                     if self.miss_msg:
-                        logging.info('miss %s with %s, %s',
-                                     self.name, pos_args, kwargs)
+                        logger.info('miss %s with %s, %s',
+                                    self.name, pos_args, kwargs)
                     res = self.function(*pos_args, **kwargs)
                     self.obj_store[args_key] = res
                 return res

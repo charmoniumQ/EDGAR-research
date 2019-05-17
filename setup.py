@@ -12,5 +12,4 @@ setup(
     name='edgar_code',
     version='0.1',
     packages=packages,
-    tests_require=['pytest'],
 )

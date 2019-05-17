@@ -5,6 +5,7 @@ from collections import UserDict as _UserDict
 from pathlib import PurePath
 from typing_extensions import Protocol
 from dask.bag import Bag as _Bag
+from distributed import Future as _Future
 
 
 # https://stackoverflow.com/a/48554601/1078199
@@ -13,6 +14,7 @@ if TYPE_CHECKING:
     # which understands Bag[T]
     Bag = _Bag
     UserDict = _UserDict
+    Future = _Future
 else:
     # I need to make `Bag` subscriptable
     # subscripting FakeGenericMeta is a no-op
@@ -27,6 +29,12 @@ else:
         def __getitem__(cls, item):
             return cls
     class UserDict(_UserDict, metaclass=FakeUserDictMeta):
+        pass
+
+    class FakeFutureMeta(type(_Future)):
+        def __getitem__(cls, item):
+            return cls
+    class Future(_Future, metaclass=FakeFutureMeta):
         pass
 
 ResultT = TypeVar('ResultT')

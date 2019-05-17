@@ -80,4 +80,4 @@ def test_time_code() -> None:
                 (key, expected_val, actual_stats[key])
             # memory is really inconsistent
             # assert actual_mem_val == 0
-    print(time_code.format_stats())
+    time_code.print_stats()
