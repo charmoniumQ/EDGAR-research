@@ -201,7 +201,7 @@ Item 1.   BUSINESS.
         'Item 1.  Business',
         'McDonald\'s Corporation, the registrant, together with its subsidiaries, is referred',
         '9',
-        'The total number of pages in this Report is ___.',
+        'The total number of pages in this Report is',
         'PART I',
         'Item 1.   BUSINESS.',
     ]

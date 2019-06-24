@@ -1,25 +1,29 @@
 from typing import (
-    cast, Generator, Any, Callable, TypeVar, Tuple, Dict, List, Optional
+    cast, Generator, Any, Callable, TypeVar,
+    Tuple, Dict, List, Optional,
 )
 import functools
 import gc
 import os
-import threading
 import math
 import copy
 import logging
 import datetime
+import threading
 import contextlib
 import collections
 import psutil
+try:
+    from edgar_code.util.picklable_threading import ThreadLocalData, RLock
+except ImportError:
+    # pylint: disable=ungrouped-imports
+    from threading import RLock, local as ThreadLocalData # type: ignore
 
 
 logger = logging.getLogger(__name__)
 
 
-class _TimeCodeData(threading.local):
-    stack: List[str]
-
+class _TimeCodeData(ThreadLocalData):
     def __init__(self) -> None:
         super().__init__()
         if threading.current_thread() is threading.main_thread():
@@ -27,11 +31,12 @@ class _TimeCodeData(threading.local):
         else:
             self.stack = ['Thread ' + threading.current_thread().name]
 
+
 FunctionType = TypeVar('FunctionType', bound=Callable[..., Any])
 class _TimeCode:
     def __init__(self) -> None:
         self.data = _TimeCodeData()
-        self.lock = threading.RLock()
+        self.lock = RLock()
         self.stats: Dict[Tuple[str, ...], List[Tuple[float, int]]] = collections.defaultdict(list)
 
     def get_stack(self) -> List[str]:
@@ -122,16 +127,27 @@ It is like function-profiling, but:
 
     def make_timed_func(
             self, func: FunctionType,
-            print_start: bool = True, print_time: bool = True, run_gc: bool = False,
+            print_start: bool = True, print_time: bool = True,
+            print_args: bool = False, run_gc: bool = False,
     ) -> FunctionType:
         @functools.wraps(func)
         def timed_func(*args: Any, **kwargs: Any) -> Any:
-            with self.ctx(func.__qualname__, print_start, print_time, run_gc):
+            if print_args:
+                arg_str = ''.join([
+                    '(',
+                    ', '.join(f'{arg!r}' for arg in args),
+                    ', '.join(f'{key}={val!r}' for key, val in kwargs.items()),
+                    ')',
+                ])
+            else:
+                arg_str = ''
+            with self.ctx(func.__qualname__ + arg_str, print_start, print_time, run_gc):
                 return func(*args, **kwargs)
         return cast(FunctionType, timed_func)
 
     def decor(
-            self, print_start: bool = True, print_time: bool = True, run_gc: bool = False,
+            self, print_start: bool = True, print_time: bool = True,
+            print_args: bool = False, run_gc: bool = False,
     ) -> Callable[[FunctionType], FunctionType]:
         '''Decorator for time_code
 
@@ -150,7 +166,7 @@ It is like function-profiling, but:
         '''
 
         def make_timed_func(func: FunctionType) -> FunctionType:
-            return self.make_timed_func(func, print_start, print_time, run_gc)
+            return self.make_timed_func(func, print_start, print_time, print_args, run_gc)
         return make_timed_func
 
     def format_stats(self) -> str:
@@ -205,10 +221,16 @@ It is like function-profiling, but:
     def print_stats(self) -> None:
         print(self.format_stats())
 
-    def add_stats(self, other_stats: Dict[Tuple[str, ...], List[Tuple[float, int]]]):
+    def add_stats(
+            self, other_stats: Dict[Tuple[str, ...], List[Tuple[float, int]]]
+    ) -> None:
         with self.lock:
             for key, times in other_stats.items():
                 self.stats[key].extend(times)
+
+    def clear(self) -> None:
+        with self.lock:
+            self.stats.clear()
 
 
 def mem2str(n_bytes: float, base2: bool = True, round_up: bool = False) -> Tuple[float, str, float]:

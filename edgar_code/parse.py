@@ -6,7 +6,7 @@ import datetime
 import zipfile
 import re
 import chardet
-from edgar_code.util import download_retry
+from edgar_code.util import download_retry, time_code
 
 
 logger = logging.getLogger(__name__)
@@ -22,6 +22,7 @@ class Index(NamedTuple):
     qtr: int
 
 
+@time_code.decor(print_start=False, print_time=False)
 def download_index_lines(year: int, qtr: int) -> Iterable[bytes]:
     index_type = 'form'
     url = f'https://www.sec.gov/Archives/edgar/full-index/{year}/QTR{qtr}/{index_type}.zip'
@@ -214,6 +215,7 @@ def is_html(text: bytes) -> bool:
     )
 
 
+@time_code.decor(print_start=False, print_time=False)
 def html2paragraphs(bhtml: bytes) -> List[str]:
     '''extracts text from html doc
 
@@ -251,6 +253,7 @@ Puts newlines between semantic paragraphs'''
     return text.split('my-escape-newlines')
 
 
+@time_code.decor(print_start=False, print_time=False)
 def text2paragraphs(btext: bytes) -> List[str]:
     text = btext.decode(chardet.detect(btext)['encoding'])
 
@@ -307,6 +310,7 @@ def is_text_line(line: str) -> bool:
     )
 
 
+@time_code.decor(print_start=False, print_time=False)
 def clean_paragraph(paragraph: str) -> str:
     # &nbsp; -> ' '
     paragraph = paragraph.replace(' ', ' ')
@@ -392,19 +396,19 @@ def paragraphs2rf(
         if stop_pattern.match(paragraph)
     ]
     if len(starts) != 1:
-        start_texts = [paragraphs[start][:20] for start in starts]
         raise ParseError(
             f'got {len(starts)} starts:\n'
-            + '\n'.join(paragraph for paragraph in paragraphs
-                        if 'item 7' in paragraph.lower() or 'item 1a' in paragraph.lower()
+            + '\n'.join(
+                paragraph for paragraph in paragraphs
+                if 'item 7' in paragraph.lower() or 'item 1a' in paragraph.lower()
             )
         )
     if len(stops) != 1:
-        stop_texts = [paragraphs[stop][:20] for stop in stops]
         raise ParseError(
             f'got {len(stops)} stops:\n'
-            + '\n'.join(paragraph for paragraph in paragraphs
-                        if 'item 8' in paragraph.lower() or 'item 2' in paragraph.lower()
+            + '\n'.join(
+                paragraph for paragraph in paragraphs
+                if 'item 8' in paragraph.lower() or 'item 2' in paragraph.lower()
             )
         )
     else:

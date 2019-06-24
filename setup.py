@@ -12,4 +12,8 @@ setup(
     name='edgar_code',
     version='0.1',
     packages=packages,
+    package_data={
+        # include files in any package with these extensions
+        '': ['*.yaml'],
+    }
 )

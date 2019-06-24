@@ -2,15 +2,15 @@ from __future__ import annotations
 import abc
 import shutil
 import functools
-import threading
 from pathlib import Path
 import urllib.parse
 from typing import (
     Callable, Any, TypeVar, cast, Tuple, Dict, Optional,
-    Union, Hashable
+    Union, Hashable,
 )
 import logging
 from edgar_code.types import PathLike, Serializer, UserDict
+from edgar_code.util.picklable_threading import RLock
 
 
 logger = logging.getLogger(__name__)
@@ -71,7 +71,7 @@ class Cache:
         self.obj_store = obj_store(self.name)
         self.hit_msg = hit_msg
         self.miss_msg = miss_msg
-        self.sem = threading.RLock()
+        self.sem = RLock()
         self.__qualname__ = f'Cache({self.name})'
         self.disabled = False
 

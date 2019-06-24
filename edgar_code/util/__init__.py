@@ -4,6 +4,7 @@ from edgar_code.util.list_dict import (
     merge_dicts, concat_lists, generator2iterator, invert,
     generator2fn_list, flatten_iter
 )
+import edgar_code.util.picklable_threading
 
 
 def download_retry(

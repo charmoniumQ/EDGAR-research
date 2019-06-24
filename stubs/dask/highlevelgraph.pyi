@@ -10,12 +10,14 @@ Computation = Any
 
 class HighLevelGraph:
     dicts: Dict[Key, Task]
+
     @classmethod
-    def HighLeveLGraph(
-            cls,
+    def from_collections(
+            self,
             name: str,
             dsk: Dict[Key, Task],
             dependencies: List[Any],
     ) -> HighLevelGraph:
         # TODO: don't use Any here
         ...
+

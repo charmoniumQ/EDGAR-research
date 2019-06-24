@@ -117,18 +117,25 @@ class WGSFile(io.BytesIO):
         super().close()
 
 
-path_attrs = ['__truediv__', 'open', 'parent']
 def is_pathlike(obj: Any) -> bool:
+    path_attrs = [
+        '__truediv__', 'mkdir', 'exists', 'unlink', 'iterdir', 'open', 'parent'
+    ]
     return all(hasattr(obj, attr) for attr in path_attrs)
 
 
-def pathify(path: Union[str, PathLike]) -> PathLike:
-    if isinstance(path, str):
-        return Path(path)
-    elif is_pathlike(path):
-        return path
+PotentiallyPathLike = Union[PathLike, str, bytes]
+
+
+def pathify(obj: PotentiallyPathLike) -> Union[PathLike, Path]:
+    if isinstance(obj, bytes):
+        return Path(obj.decode())
+    elif isinstance(obj, str):
+        return Path(obj)
+    elif is_pathlike(obj):
+        return obj
     else:
-        raise TypeError()
+        raise TypeError(f'{obj!r} is not PotentiallyPathLike')
 
 
 def copy(src_path: PathLike, dst_path: PathLike) -> None:

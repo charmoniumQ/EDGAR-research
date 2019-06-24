@@ -1,9 +1,7 @@
 from typing import cast
-import pytest
 import distributed
 import dask.bag
-import logging
-import edgar_code.cli.config
+import pytest
 from edgar_code.cache import Cache
 import edgar_code.retrieve as retrieve
 
@@ -14,9 +12,10 @@ def test_retrieve() -> None:
         ip='localhost:8786',
         # I want a bokeh interface to check progress
         dashboard_address='localhost:8787',
-        # single process, single thread allows ctrl+C backtrace to show where the code is getting stuck
-        # otherwise, it will say, "I'm stuck waiting for other processes"
-        # It also makes time_code more meaningful
+        # single process, single thread allows ctrl+C backtrace to
+        # show where the code is getting stuck. Otherwise, it will say,
+        # "I'm stuck waiting for other processes." It also makes
+        # time_code more meaningful
         processes=False,
         threads_per_worker=1,
     )
@@ -28,13 +27,13 @@ def test_retrieve() -> None:
         # in the cloud
         for cached_func in [retrieve.get_rfs, retrieve.get_paragraphs,
                             retrieve.get_raw_forms, retrieve.get_indexes]:
-            assert type(cached_func) == Cache
+            assert isinstance(cached_func, Cache)
             cast(Cache, cached_func).disabled = True
 
-        rfs = dask.bag.zip(
+        rfs = dask.bag.zip( # pylint: disable=unused-variable
             retrieve.get_indexes('10-K', 1995, 1),
             retrieve.get_rfs(1995, 1)
-        ).take(30, npartitions=3)
+        ).take(10, npartitions=1)
 
         # for index, rf in rfs:
         #     if isinstance(rf, Exception):

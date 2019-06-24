@@ -51,6 +51,8 @@ def f2() -> None: # pylint: disable=invalid-name
 
 
 def test_time_code() -> None:
+    time_code.clear()
+
     # if exception occurs, it is propogated up,
     # but time_code still takes measurements
     with pytest.raises(UniqueExceptionType):

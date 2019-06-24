@@ -18,6 +18,7 @@ def get_indexes(form_type: str, year: int, qtr: int) -> Bag[Index]:
 
 
 @config.cache_decor
+@time_code.decor(print_start=False, print_time=False)
 def get_raw_forms(form_type: str, year: int, qtr: int) -> Bag[Result[bytes]]:
     def get_raw_forms_f(index: Index) -> bytes:
         with time_code.ctx('download sgml', print_start=False, print_time=False):
@@ -34,6 +35,7 @@ def get_raw_forms(form_type: str, year: int, qtr: int) -> Bag[Result[bytes]]:
 
 
 @config.cache_decor
+@time_code.decor(print_start=False, print_time=False)
 def get_paragraphs(form_type: str, year: int, qtr: int) -> Bag[Result[List[str]]]:
     @time_code.decor(print_start=False, print_time=False)
     def get_main_texts_f(raw_form: bytes) -> List[str]:
@@ -55,6 +57,7 @@ def get_paragraphs(form_type: str, year: int, qtr: int) -> Bag[Result[List[str]]
 
 
 @config.cache_decor
+@time_code.decor(print_start=False, print_time=False)
 def get_rfs(year: int, qtr: int) -> Bag[Result[List[str]]]:
     def paragraphs2rf(paragraphs: List[str]) -> List[str]:
         return parse.paragraphs2rf(paragraphs, year < 2006)

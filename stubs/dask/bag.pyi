@@ -11,19 +11,29 @@ V = TypeVar('V')
 
 
 class Bag(Generic[T]):
+    dask: HighLevelGraph
     name: str
     npartitions: int
-    dask: HighLevelGraph
+    def __init__(
+            self, dask: HighLevelGraph, name: str, npartitions: int
+    ) -> None:
+        ...
+
     def map(self, f: Callable[[T], U]) -> Bag[U]:
         ...
-    def compute(self) -> Iterable[T]:
+
+    def compute(self) -> List[T]:
         ...
-    def take(self, n: int, compute: bool = ...) -> List[T]:
+
+    def take(self, n: int, compute: bool = ..., npartitions: int = ...) -> List[T]:
         ...
+
     def map_partitions(self, func: Callable[[List[T]], List[U]]) -> Bag[U]:
         ...
+
     def filter(self, pred: Callable[[T], bool]) -> Bag[T]:
         ...
+
     def reduction(
             self,
             perpartition: Callable[[Iterable[T]], U],

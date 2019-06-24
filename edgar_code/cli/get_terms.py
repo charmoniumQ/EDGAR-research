@@ -1,7 +1,8 @@
-from typing import List, Dict, Iterable, cast
-from typing_extensions import Counter
+
+from typing import List, Dict, Iterable, Union
 import collections
 import csv
+from typing_extensions import Counter
 import edgar_code.cli.config as config
 from edgar_code.gs_path import PathLike
 from edgar_code.util import time_code, flatten_iter
@@ -10,13 +11,19 @@ from edgar_code.tokenize3 import paragraph2terms, TermsType, PhraseCount
 from edgar_code.types import Bag
 
 
+@config.cache_decor
 def get_terms(year: int, qtr: int) -> Bag[List[TermsType]]:
+
+    def ensure_str(arg: Union[List[str], Exception]) -> List[str]:
+        if isinstance(arg, list):
+            return arg
+        else:
+            raise RuntimeError()
+
     return (
-        cast(
-            Bag[List[str]],
-            get_rfs(year, qtr)
-            .filter(lambda rf: not isinstance(rf, Exception))
-        )
+        get_rfs(year, qtr)
+        .filter(lambda rf: not isinstance(rf, Exception))
+        .map(ensure_str) # TODO: eliminate; this is for mypy
         .map(lambda paragraphs: list(map(paragraph2terms, paragraphs)))
     )
 

@@ -3,18 +3,21 @@ import tempfile
 import contextlib
 import csv
 from pathlib import Path
+import logging
 import matplotlib.pyplot as plt
-import dask.bag
 import numpy as np
+import dask.bag
 import edgar_code.cli.config as config
-logger = logging.getLogger(__name__)
 from edgar_code.gs_path import copy
 from edgar_code.util import time_code
 from edgar_code.retrieve import get_rfs, get_indexes
-from edgar_code.types import PathLike, Bag, Future
+from edgar_code.types import PathLike, Bag
 
 
 # TODO: combine with retrieve.py
+
+
+logger = logging.getLogger(__name__)
 
 
 def rf_mapper(rf: Union[List[str], Exception]) -> Tuple[int, int, str]:
@@ -28,15 +31,15 @@ def rf_mapper(rf: Union[List[str], Exception]) -> Tuple[int, int, str]:
         return (-1, -1, repr(rf))
 
 T = TypeVar('T')
-
 def time_code_getter(val: T) -> T:
     print(time_code.format_stats())
     return val
 
+@time_code.decor(print_start=True, print_time=True, print_args=True)
 def get_bag(year: int, qtr: int) -> Bag[Tuple[str, int, int, str]]:
     return dask.bag.map(
-        lambda a, b: (a[0], b[0], b[1], b[2]),
-        get_indexes('10-K', year, qtr).map(lambda index: (index.url,)),
+        lambda index, rf_count: (index.url, rf_count[0], rf_count[1], rf_count[2]),
+        get_indexes('10-K', year, qtr),
         get_rfs(year, qtr).map(rf_mapper),
     )
 
@@ -56,11 +59,17 @@ def get_styled_ax(path: PathLike) -> Generator[plt.Axes, None, None]:
 
 def main() -> None:
     client = config.get_client()
+    logger.debug('using client: %r', client)
 
     # This comment is commented out
     # # submiting all bags for computation at once loads the cluster
     # # more efficiently. Workers don't have to idle in between bags
     # # being submitted; there is always more work available.
+    # before uncommenting generator->list
+
+    get_bag(1995, 1).compute()
+    logger.debug('here')
+    get_bag(1995, 2).compute()
 
     future_bags = [
         ((year, qtr), get_bag(year, qtr).compute())
@@ -80,11 +89,13 @@ def main() -> None:
             # # thing might not fit in RAM on the workers.  When I consume
             # # one result, it frees up that memory, so they can compute the
             # # next one. It also is less memory intensive on this pod.
-            with time_code.ctx(f'fetching get_rfs({year}, {qtr})'):
+            with time_code.ctx(
+                    f'fetching get_rfs({year}, {qtr})', print_start=True, print_time=True
+            ):
                 # bag = future_bag.result(timeout=None)
                 bag = future_bag
 
-            with time_code.ctx(f'write for {year} {qtr}'):
+            with time_code.ctx(f'write for {year} {qtr}', print_start=True, print_time=True):
                 urls, chars, paragraphs, texts = (
                     [''] * len(bag),
                     np.zeros(len(bag), dtype=int),
@@ -106,6 +117,7 @@ def main() -> None:
 
                 total = len(bag)
                 good = sum(map(
+                    # cannot type lambdas; must use cast :(
                     cast(Callable[[int], int], lambda x: x != -1),
                     paragraphs
                 ))
