@@ -120,7 +120,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, public_egg_path, ru
                                 ],
                                 command=[
                                     '/bin/sh', '-c',
-                                    'dask-scheduler --port ${SCHEDULER_SERVICE_PORT}'
+                                    f'dask-scheduler --port ${{SCHEDULER_SERVICE_PORT_SCHEDULER}} --dashboard-address 0.0.0.0:${{SCHEDULER_SERVICE_PORT_DASHBOARD}}',
                                 ],
                                 volume_mounts=[secret_volume_mount],
                                 env=env_vars,
@@ -218,9 +218,7 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, public_egg_path, ru
                                     '/bin/sh', '-c',
                                     # can this deploy from an GS path?
                                     ' && '.join([
-                                        'python3 -m easy_install ${DEPLOY_EGG}',
-                                        'python3 --version',
-                                        'pip3 --version',
+                                        'python3 -m easy_install ${DEPLOY_EGG} > /dev/null',
                                         'python3 -m ${RUN_MODULE}',
                                     ])
                                 ],
@@ -229,7 +227,6 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, public_egg_path, ru
                                 resources=kubernetes.client.V1ResourceRequirements(
                                     requests=dict(
                                         cpu='450m',
-                                        # cpu='4550m',
                                         memory=f'{memory}Ki',
                                     ),
                                 ),
@@ -246,4 +243,3 @@ def setup_kubernetes(kube_api, namespace, n_workers, images, public_egg_path, ru
 # ns=$(kubectl get namespaces -o 'jsonpath={.items[*].metadata.name}' --field-selector 'status.phase==Active' | egrep 'edgar-[a-z]*' -o)
 # kubectl -n ${ns} logs -f $(kubectl -n ${ns} get -o 'jsonpath={.items[].metadata.name}' pods -l job-name=job)
 # kubectl -n ${ns} delete po $(kubectl -n ${ns} get po -o json | jq -r '.items[] | select(.status.podIP == "10.16.3.7") | .metadata.name')
-# while kubectl -n ${ns} get po | grep Pending > /dev/null; do sleep 5; done ; kubectl -n ${ns} logs -f $(kubectl -n ${ns} get -o 'jsonpath={.items[0].metadata.name}' pods -l job-name=job) ; ntfy -b telegram send 'job done

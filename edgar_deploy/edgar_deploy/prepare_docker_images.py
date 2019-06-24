@@ -1,7 +1,6 @@
 import docker
 import subprocess
 import itertools
-import logging
 from concurrent.futures import ThreadPoolExecutor
 from .time_code import time_code
 from .config import config
@@ -27,7 +26,7 @@ def prepare_docker_images(cache_dir=None):
     executor = ThreadPoolExecutor(max_workers=len(dockerfolders))
     compiled_images = {
         dockerfolder.name: executor.submit(
-            prepare_docker_image_cached, dockerfolder, cache_dir
+            prepare_docker_image_cached, dockerfolder, cache_dir, True
         )
         for dockerfolder in dockerfolders
     }
@@ -40,7 +39,7 @@ def prepare_docker_image(dockerfolder, push, tag):
     if tag is None:
         tag = f'gcr.io/{config.gcloud.project}/{name}:{version}'
 
-    with time_code.ctx(f'docker build/push {name}'):
+    with time_code.ctx(f'docker build/push {tag}', print_start=True, print_time=True):
         client = docker.from_env()
 
         client.images.build(
@@ -53,7 +52,6 @@ def prepare_docker_image(dockerfolder, push, tag):
         )
 
         if push:
-            logging.info(f'pushing {tag}')
             client.images.push(tag)
 
         return tag

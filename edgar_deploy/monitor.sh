@@ -32,6 +32,10 @@ echo logging
 
 worker0_pod=$(kubectl -n $ns get -o json pods -l deployment=worker | jq -r '.items[0].metadata.name')
 # tmux new-window -a "kubectl -n ${ns} logs -f ${worker0_pod}"
+
+scheduler_pod=$(kubectl -n $ns get -o json pods -l deployment=scheduler | jq -r '.items[0].metadata.name')
+tmux new-window -a "kubectl -n ${ns} logs -f ${scheduler_pod}"
+
 kubectl -n ${ns} logs -f ${job_pod}
 kubectl -n ${ns} logs -f ${job_pod} | tail -n 5 | notify
 kill $!

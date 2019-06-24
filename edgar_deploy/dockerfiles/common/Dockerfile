@@ -28,3 +28,7 @@ RUN python -m spacy download en_core_web_sm
 # Later they will be incorporated into the commands above it.
 
 RUN pip3 install --upgrade git+https://github.com/charmoniumQ/distributed@develop2
+
+COPY ./.dask/config.yaml /root/.dask/config.yaml
+
+RUN pip3 install --force-reinstall git+https://github.com/charmoniumQ/distributed@e06c8714dfd91b51cef053f0de04065c1c376121
